@@ -1,0 +1,85 @@
+[
+    {
+        "id": 1,
+        "name": "Burger Place",
+        "logo": "http://127.0.0.1:8000/media/category/Burger%20Place/Burger.png",
+        "state": true,
+        "freeDelivery": "50",
+        "categories": [
+            {
+                "id": 2,
+                "name": "Burger",
+                "image": "http://127.0.0.1:8000/media/category/Burger/Burger.png",
+                "menu_items": [
+                    {
+                        "id": 5,
+                        "name": "Beef Burger",
+                        "description": "ta good beef burger with sauce",
+                        "price": "5.20"
+                    },
+                    {
+                        "id": 6,
+                        "name": "jussy Burger",
+                        "description": "ta good jussy burger with sauce",
+                        "price": "7.5"
+                    }
+                ]
+            },
+            {
+                "id": 3,
+                "name": "pizza",
+                "image": "http://127.0.0.1:8000/media/category/Pizza/Pizza.png",
+                "menu_items": [
+                    {
+                        "id": 1,
+                        "name": "Beef Pizza",
+                        "description": "ta good beef Pizza with sauce",
+                        "price": "5.20"
+                    },
+                    {
+                        "id": 2,
+                        "name": "ransh Pizza",
+                        "description": "ta good ransh Pizza with sauce",
+                        "price": "10.2"
+                    }
+                ]
+            }
+        ],
+        
+        "address": "2 street name, city, state",
+        "open_in": "9 am",
+        "close_in": "3 am",
+        "order_modes": [
+            1
+        ],
+        "tax": "3.00",
+        "delivery_fee": "5.00",
+        "minimum_order": "20.00",
+        "delivery_time": 19,
+        "latitude": null,
+        "longitude": null,
+        "country": 1,
+        "city": 1
+    }
+]
+
+
+
+{ addtions :  [
+        {
+            title : 'addtions',
+            items : [
+                {name : 'saus' ,
+                     price : 20 },
+                     
+                     {name : 'chees' ,
+                     price : 20 }
+                    ]
+                     
+        }
+    ]
+}
+
+
+
+
