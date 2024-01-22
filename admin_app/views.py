@@ -1,7 +1,9 @@
-from rest_framework import generics
-from admin_app.models import Admin
-from admin_app.serializers import AdminSerializer
+from rest_framework import viewsets
+from .models import Admin
+from .serializers import AdminSerializer
+from rest_framework.permissions import IsAuthenticated
 
-class AdminRegistrationView(generics.CreateAPIView):
+class AdminViewSet(viewsets.ModelViewSet):
     queryset = Admin.objects.all()
     serializer_class = AdminSerializer
+    permission_classes = [IsAuthenticated]

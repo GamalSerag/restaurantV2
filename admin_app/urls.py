@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import AdminRegistrationView
+from .views import AdminViewSet
 
 urlpatterns = [
-    path('register/', AdminRegistrationView.as_view(), name='Admin-registration'),
+    path('admins/', AdminViewSet.as_view({'get': 'list'}), name='admin-list'),
     
 ]

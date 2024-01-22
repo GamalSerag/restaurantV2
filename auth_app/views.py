@@ -1,37 +1,49 @@
-from auth_app.models import User
-from auth_app.serializers import UserSerializer
+from django.http import JsonResponse
+from rest_framework.authtoken.models import Token
+from .models import User
+from .serializers import UserSerializer
 from django.contrib.auth import authenticate, login, logout
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserRegistrationView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+            print(f"User registered successfully: {user.username}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print(f"Registration failed. Errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserLoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
-        username = request.data.get('username')
+        email = request.data.get('email')
         password = request.data.get('password')
+        print(f"Login attempt: email={email}, password={password}")
 
-        user = authenticate(request, username=username, password=password)
+        # Authenticate using email instead of username
+        user = authenticate(request, email=email, password=password)
+        print(f"Authenticated user: {user}")
+
         if user is not None:
             login(request, user)
             token, created = Token.objects.get_or_create(user=user)
-            if created:
-                token.delete()
-                token = Token.objects.create(user=user)
+            response = JsonResponse({'token': token.key, 'username': user.username, 'role': user.role})
+            response.set_cookie('auth_token', token.key, httponly=True, secure=True, samesite='Strict')
 
+            print(f"Login successful: {user.username}")
             return Response({'token': token.key, 'username': user.username, 'role': user.role})
         else:
-            return Response({'message': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
+            print(f"Login failed. Invalid email or password.")
+            return Response({'message': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class UserLogoutView(APIView):
     permission_classes = [IsAuthenticated]

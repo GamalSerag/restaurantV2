@@ -1,5 +1,5 @@
-[
-    {
+
+  [ {
         "id": 1,
         "name": "Burger Place",
         "logo": "http://127.0.0.1:8000/media/category/Burger%20Place/Burger.png",
@@ -60,26 +60,37 @@
         "longitude": null,
         "country": 1,
         "city": 1
-    }
-]
+    },
 
 
 
-{ addtions :  [
-        {
-            title : 'addtions',
-            items : [
-                {name : 'saus' ,
-                     price : 20 },
+
+
+
+{ "addtions" :  [ {
+            "title" : "addtions",
+            "items" : [
+                {"name" : "saus" ,
+                     "price" : 20 },
                      
-                     {name : 'chees' ,
-                     price : 20 }
-                    ]
-                     
-        }
+                     {"name" : "chees" ,
+                     "price" : 20 }
+                    ] }
     ]
-}
+},
 
 
 
+{
+    "username": "Mohamed",
+    "password": "12345",
+    "email": "mohamed@example.com",
+    "role": "customer",  
+    "first_name": "Mohamed",
+    "last_name": "Ahmed",
+    "phone_number": "1234567890"
+  }
 
+
+
+]

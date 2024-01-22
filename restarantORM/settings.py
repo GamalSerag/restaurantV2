@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
 
     #######
     'auth_app',
@@ -95,7 +96,7 @@ WSGI_APPLICATION = 'restarantORM.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ordringfood',
+        'NAME': 'restaurantV3',
         'USER': 'postgres',
         'PASSWORD': '12345',
         'HOST': 'localhost',
@@ -161,3 +162,16 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 
 AUTH_USER_MODEL = 'auth_app.User'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+   
+}
+
+AUTHENTICATION_BACKENDS = [
+    'auth_app.auth_backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+    'rest_framework.authentication.TokenAuthentication',
+]
