@@ -153,7 +153,7 @@ MEDIA_URL = '/media/'
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.1.6:8100",  # Add the URL of your React frontend
+    "http://192.168.1.7:8300",  # Add the URL of your React frontend
 ]
 
 # Optional: Allow credentials (cookies, authentication headers, etc.)

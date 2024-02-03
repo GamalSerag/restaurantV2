@@ -7,6 +7,9 @@ from location_app.models import City
 from .models import Category, Restaurant, MenuItem
 from .serializers import CategorySerializer, CityCategorySerializer, RestaurantSerializer, MenuItemSerializer
 from urllib.parse import unquote
+from rest_framework.permissions import IsAuthenticated
+from auth_app.permissions import IsAdminOfRestaurant
+
 
 class RestaurantListView(generics.ListAPIView):
     queryset = Restaurant.objects.all()
@@ -19,6 +22,13 @@ class RestaurantListView(generics.ListAPIView):
 class RestaurantDetailView(generics.RetrieveAPIView):
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
+
+
+class RestaurantDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Restaurant.objects.all()
+    serializer_class = RestaurantSerializer
+    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
+    # permission_classes = [IsAuthenticated]
 
 
 class RestaurantListViewByCity(generics.ListAPIView):

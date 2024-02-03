@@ -1,6 +1,7 @@
 import json
 from django.db import models
 from location_app.models import City, Country
+from admin_app.models import Admin
 from django.contrib.postgres.fields import ArrayField
 
 
@@ -42,6 +43,7 @@ class Restaurant(models.Model):
     longitude = models.FloatField(null=True, blank=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
     city = models.ForeignKey(City, on_delete=models.CASCADE)
+    admin = models.OneToOneField(Admin, on_delete=models.CASCADE)
 
     
 

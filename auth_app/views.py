@@ -1,6 +1,9 @@
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
+from admin_app.models import Admin
+from customer_app.models import Customer
 from .models import User
+
 from .serializers import UserSerializer
 from django.contrib.auth import authenticate, login, logout
 from rest_framework import status
@@ -17,6 +20,12 @@ class UserRegistrationView(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            email = request.data.get('email')
+
+            if user.role == 'customer':
+                Customer.objects.create(user=user, email=email)
+            elif user.role == 'restaurant_owner':
+                Admin.objects.create(user=user, email=email)
             print(f"User registered successfully: {user.username}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
