@@ -21,7 +21,7 @@ class User(AbstractUser):
         ('customer', 'Customer'),
         ('deliveryman', 'Delivery Man'),
     )
-    
+    objects = CustomUserManager()
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=16, choices=ROLE_CHOICES)
     REQUIRED_FIELDS = []
