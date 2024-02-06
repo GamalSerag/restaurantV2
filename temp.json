@@ -94,3 +94,21 @@
 
 
 ]
+
+
+ {
+    "name": "Sample Pizza",
+    "description": "A delicious pizza with various toppings",
+    "sizes_and_prices": [
+        {"size": "Small", "price": "10.00"},
+        {"size": "Medium", "price": "15.00"},
+        {"size": "Large", "price": "20.00"}
+    ],
+    "restaurant": restaurant_instance 
+}
+
+
+
+
+[{"price":"10.00","size":"big"},{"price":"5.00","size":"small"}]
+'size_and_price': ['[object Object],[object Object]'], 'extras': ['null'], 'ingredients'

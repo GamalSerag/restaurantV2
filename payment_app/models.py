@@ -11,6 +11,17 @@ class PaymentWay(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+class Subscription(models.Model):
+    name = models.CharField(max_length=255)
+    subscription_type = models.CharField(choices=[('monthly', 'Monthly'), ('commission', 'Commission')], max_length=20)
+    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    duration = models.DurationField()
+
+    def __str__(self) -> str:
+        return self.name
 
 class PaymentTransaction(models.Model):
     payment_way = models.ForeignKey(PaymentWay, on_delete=models.CASCADE)

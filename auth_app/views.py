@@ -2,6 +2,8 @@ from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
 from admin_app.models import Admin
 from customer_app.models import Customer
+from restaurant_app.models import OrderMode, Restaurant
+from restaurant_app.serializers import RestaurantSerializer
 from .models import User
 
 from .serializers import UserSerializer
@@ -17,15 +19,40 @@ logger = logging.getLogger(__name__)
 
 class UserRegistrationView(APIView):
     def post(self, request):
+        print(request.data)
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
+
             user = serializer.save()
             email = request.data.get('email')
 
             if user.role == 'customer':
                 Customer.objects.create(user=user, email=email)
             elif user.role == 'restaurant_owner':
-                Admin.objects.create(user=user, email=email)
+
+                phone_number = request.data.get('admin_phone_number')
+                first_name = request.data.get('first_name')
+                last_name = request.data.get('last_name')
+
+                # Extract restaurant details from the request
+                restaurant_data = request.data.get('restaurant', {})
+                restaurant_data['admin'] = user  # Associate the admin user with the restaurant
+
+                # Create a new restaurant using the extracted data
+                restaurant_serializer = RestaurantSerializer(data=restaurant_data)
+                if restaurant_serializer.is_valid():
+                    restaurant_serializer.save()
+                    restaurant = restaurant_serializer.instance
+                    Admin.objects.create(user=user, phone_number=phone_number, first_name=first_name, last_name=last_name, restaurant=restaurant)
+
+                    print(f"User registered successfully: {user.username}")
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    # Delete the user if restaurant creation fails
+                    user.delete()
+                    print(f"Restaurant creation failed. Errors: {restaurant_serializer.errors}")
+                    return Response(restaurant_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
             print(f"User registered successfully: {user.username}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
@@ -45,11 +72,36 @@ class UserLoginView(ObtainAuthToken):
         if user is not None:
             login(request, user)
             token, created = Token.objects.get_or_create(user=user)
-            response = JsonResponse({'token': token.key, 'username': user.username, 'role': user.role})
+
+            # Check if the user is a restaurant owner
+            if user.role == 'restaurant_owner':
+                # Get the associated Admin profile
+                admin_profile = Admin.objects.get(user=user)
+                restaurant = admin_profile.restaurant
+
+                # Include the restaurant information in the response
+                response_data = {
+                    'token': token.key,
+                    'username': user.username,
+                    'role': user.role,
+                    
+                    'restaurant_id': restaurant.id,
+                    'restaurant_name': restaurant.name,  # Include other restaurant details as needed
+                    'subscription': admin_profile.subscription,
+                    'is_subscribed': admin_profile.is_subscribed
+                }
+            else:
+                response_data = {
+                    'token': token.key,
+                    'username': user.username,
+                    'role': user.role,
+                }
+
+            response = JsonResponse(response_data)
             response.set_cookie('auth_token', token.key, httponly=True, secure=True, samesite='Strict')
 
             print(f"Login successful: {user.username}")
-            return Response({'token': token.key, 'username': user.username, 'role': user.role})
+            return Response(response_data)
         else:
             print(f"Login failed. Invalid email or password.")
             return Response({'message': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)

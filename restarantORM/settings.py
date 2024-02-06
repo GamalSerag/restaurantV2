@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_jsonform',
 
     #######
     'auth_app',
@@ -48,7 +49,7 @@ INSTALLED_APPS = [
     'order_app',
     'employee_app',
     'review_app',
-    'promotion_app',
+    'offers_app',
     'delivery_app',
     'payment_app',
     'location_app',
@@ -153,7 +154,7 @@ MEDIA_URL = '/media/'
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.1.7:8300",  # Add the URL of your React frontend
+    "http://192.168.1.8:8300",  # Add the URL of your React frontend
 ]
 
 # Optional: Allow credentials (cookies, authentication headers, etc.)

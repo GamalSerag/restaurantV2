@@ -1,8 +1,9 @@
 import json
 from django.db import models
 from location_app.models import City, Country
-from admin_app.models import Admin
 from django.contrib.postgres.fields import ArrayField
+# from django_jsonform.models.fields import ArrayField, JSONField
+
 
 
 def restaurant_logo_path(instance, filename):
@@ -22,28 +23,32 @@ def menuitem_image_path(instance, filename):
     return f'menuitems/{instance.name}/{filename}'
 
 
+
+
 class Restaurant(models.Model):
     timestamps = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
-    logo = models.ImageField(upload_to=restaurant_logo_path)
+    logo = models.ImageField(upload_to=restaurant_logo_path, null=True)
     background = models.ImageField(upload_to=restaurant_background_path, null=True)
-    state = models.BooleanField()  # open or closed
-    freeDelivery = models.CharField(max_length=10)
-    categories = models.ManyToManyField('Category')
-    address = models.TextField()
-    open_in = models.CharField(max_length=5)
-    close_in = models.CharField(max_length=5)
+    state = models.BooleanField(default='True')  # open or closed
+    free_delivery = models.CharField(max_length=10, null=True)
+    categories = models.ManyToManyField('Category', blank=True)
+    address = models.TextField(max_length=500)
+    open_in = models.CharField(max_length=5, null=True)
+    close_in = models.CharField(max_length=5, null=True)
     order_modes = models.ManyToManyField('OrderMode', blank=True)
     # additions = models.JSONField() ###     ######     #####     #######    #########    ####
-    tax = models.DecimalField(max_digits=5, decimal_places=2)
-    delivery_fee = models.DecimalField(max_digits=5, decimal_places=2)
-    minimum_order = models.DecimalField(max_digits=5, decimal_places=2)
-    delivery_time = models.IntegerField()
+    tax = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    delivery_fee = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    minimum_order = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    delivery_time = models.IntegerField(null=True)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
     city = models.ForeignKey(City, on_delete=models.CASCADE)
-    admin = models.OneToOneField(Admin, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=15 , null=True)
+    
+    
 
     
 
@@ -61,20 +66,20 @@ class Category(models.Model):
 
 
 class OrderMode(models.Model):
+   
     name = models.CharField(max_length=255)
 
     def __str__(self):
         return self.name
 
-
 class MenuItem(models.Model):
     timestamps = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     description = models.TextField()
     image = models.ImageField(upload_to=menuitem_image_path, null=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, default=None)
     ingredients = ArrayField(models.CharField(max_length=100, null=True, blank=True), default=list)
-    price = models.DecimalField(max_digits=8, decimal_places=2)
+    sizes_and_prices = ArrayField(models.JSONField(), default=list)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     
 
