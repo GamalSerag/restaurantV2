@@ -112,3 +112,16 @@
 
 [{"price":"10.00","size":"big"},{"price":"5.00","size":"small"}]
 'size_and_price': ['[object Object],[object Object]'], 'extras': ['null'], 'ingredients'
+
+
+
+<QueryDict: {'name': ['Pizza 7ankaliso chan'], 'description': 'lorem lorem lorem lorem lorem',
+ 'sizes_and_prices[0][size]': 'big', 'sizes_and_prices[0][price]': '10.00',
+  'sizes_and_prices[1][size]': 'small', 'sizes_and_prices[1][price]': '8.00',
+  
+  'extras[0][title]': 'extra1', 'extras[0][extra_id]': '33', 'extras[0][items][0][id]': '4',
+   'extras[0][items][0][name]': 'egg', 'extras[0][items][0][price]': '200',
+    'extras[1][title]': 'extra 2', 'extras[1][extra_id]': '34', 'extras[1][items][0][id]': '5',
+     'extras[1][items][0][name]': 'more milk ', 'extras[1][items][0][price]': '2.00',
+      'types': 'null', 'ingredients[0]': 'tometos', 'ingredients[1]': 'milk',
+       'ingredients[2]': 'egg', 'category': '67', 'restaurant_id': '1'}>

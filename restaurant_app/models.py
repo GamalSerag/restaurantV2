@@ -2,6 +2,10 @@ import json
 from django.db import models
 from location_app.models import City, Country
 from django.contrib.postgres.fields import ArrayField
+from multiselectfield import MultiSelectField
+
+from offers_app.models import Offer
+from django.contrib import admin
 # from django_jsonform.models.fields import ArrayField, JSONField
 
 
@@ -32,11 +36,11 @@ class Restaurant(models.Model):
     background = models.ImageField(upload_to=restaurant_background_path, null=True)
     state = models.BooleanField(default='True')  # open or closed
     free_delivery = models.CharField(max_length=10, null=True)
-    categories = models.ManyToManyField('Category', blank=True)
+    # categories = models.ManyToManyField('Category', blank=True)
     address = models.TextField(max_length=500)
     open_in = models.CharField(max_length=5, null=True)
     close_in = models.CharField(max_length=5, null=True)
-    order_modes = models.ManyToManyField('OrderMode', blank=True)
+    order_modes = models.JSONField(default=list)
     # additions = models.JSONField() ###     ######     #####     #######    #########    ####
     tax = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     delivery_fee = models.DecimalField(max_digits=5, decimal_places=2, null=True)
@@ -47,10 +51,6 @@ class Restaurant(models.Model):
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
     city = models.ForeignKey(City, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15 , null=True)
-    
-    
-
-    
 
     def __str__(self):
         return self.name
@@ -62,31 +62,88 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+    
 
-
-
-class OrderMode(models.Model):
-   
-    name = models.CharField(max_length=255)
+class RestaurantCategory(models.Model):
+    name = models.CharField(max_length=50)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    offer = models.OneToOneField(Offer, on_delete=models.SET_NULL, null=True, blank=True)
+    tax =  models.FloatField(null=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ('restaurant', 'category')
 
     def __str__(self):
-        return self.name
+        return f"{self.name} (({self.category.name})) - R:{self.restaurant.name}"
+    
+
+class SizeAndPrice(models.Model):
+    size = models.CharField(max_length=50)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    menu_item = models.ForeignKey('MenuItem', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.size} - ${self.price}"
+
+
+
+class MenuItemExtra(models.Model):
+    title = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.id}-{self.title}"
+
+class MenuItemExtraItem(models.Model):
+    extra = models.ForeignKey(MenuItemExtra, on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.name}"
+    
+
+class MenuItemType(models.Model):
+    title = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.id}-{self.title}"
+
+class MenuItemTypeItem(models.Model):
+    type = models.ForeignKey(MenuItemType, on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.name}"
+
 
 class MenuItem(models.Model):
     timestamps = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=255, unique=True)
-    description = models.TextField()
+    name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(max_length=250)
     image = models.ImageField(upload_to=menuitem_image_path, null=True)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, default=None)
-    ingredients = ArrayField(models.CharField(max_length=100, null=True, blank=True), default=list)
-    sizes_and_prices = ArrayField(models.JSONField(), default=list)
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    category = models.ForeignKey(RestaurantCategory, on_delete=models.CASCADE, related_name='menu_items', default=None, null=True)
+    ingredients = ArrayField(models.CharField(max_length=100, null=True, blank=True), default=list, null = True)
     
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    offer = models.OneToOneField(Offer, on_delete=models.SET_NULL, null=True, blank=True)
+    extras = models.ManyToManyField(MenuItemExtra, blank=True)
+    types = models.ManyToManyField(MenuItemType, blank=True)
 
     def __str__(self):
         return f"{self.name} - {self.restaurant.name}"
-
     
+    def get_sizes_and_prices_display(self):
+        sizes_and_prices = SizeAndPrice.objects.filter(menu_item=self)
+        return ", ".join([f"{size.size} - ${size.price}" for size in sizes_and_prices])
+
+
+class MenuItemAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description', 'get_sizes_and_prices_display', 'category', 'restaurant']
+
+
 
 
 class RestaurantTable(models.Model): # table in the restaurant 

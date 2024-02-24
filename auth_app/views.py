@@ -2,7 +2,8 @@ from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
 from admin_app.models import Admin
 from customer_app.models import Customer
-from restaurant_app.models import OrderMode, Restaurant
+from payment_app.serializers import SubscriptionSerializer
+from restaurant_app.models import Restaurant
 from restaurant_app.serializers import RestaurantSerializer
 from .models import User
 
@@ -27,7 +28,10 @@ class UserRegistrationView(APIView):
             email = request.data.get('email')
 
             if user.role == 'customer':
-                Customer.objects.create(user=user, email=email)
+                phone_number = request.data.get('phone_number')
+                first_name = request.data.get('first_name')
+                last_name = request.data.get('last_name')
+                Customer.objects.create(user=user, email=email, phone_number=phone_number, first_name=first_name, last_name=last_name,)
             elif user.role == 'restaurant_owner':
 
                 phone_number = request.data.get('admin_phone_number')
@@ -79,6 +83,9 @@ class UserLoginView(ObtainAuthToken):
                 admin_profile = Admin.objects.get(user=user)
                 restaurant = admin_profile.restaurant
 
+                subscription_serializer = SubscriptionSerializer(admin_profile.subscription)
+                serialized_subscription = subscription_serializer.data
+
                 # Include the restaurant information in the response
                 response_data = {
                     'token': token.key,
@@ -87,7 +94,7 @@ class UserLoginView(ObtainAuthToken):
                     
                     'restaurant_id': restaurant.id,
                     'restaurant_name': restaurant.name,  # Include other restaurant details as needed
-                    'subscription': admin_profile.subscription,
+                    'subscription': serialized_subscription,
                     'is_subscribed': admin_profile.is_subscribed
                 }
             else:
@@ -112,3 +119,13 @@ class UserLogoutView(APIView):
     def post(self, request):
         logout(request)
         return Response({'detail': 'Successfully logged out.'})
+    
+class UserRoleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        role = user.role  # Assuming 'role' is a field in your User model representing the user's role
+        admin = user.admin_profile
+        is_subscribed = admin.is_subscribed
+        return Response({'role': role, 'is_subscribed': is_subscribed }, status=status.HTTP_200_OK)
