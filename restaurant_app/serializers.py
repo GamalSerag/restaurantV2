@@ -90,7 +90,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             for item_data in items_data:
                 MenuItemExtraItem.objects.create(extra=extra, **item_data)
 
-        # Create Extra instances and associated ExtraItem instances
+        # Create type instances and associated typeItem instances
         for type_data in types_data:
             items_data = type_data.pop('items', [])
             print(f"Types Data: {type_data}")  # Debugging
@@ -101,6 +101,8 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
         return menu_item
     
+
+
     def update(self, instance, validated_data):
         instance.name = validated_data.get('name', instance.name)
         instance.description = validated_data.get('description', instance.description)
@@ -109,11 +111,15 @@ class MenuItemSerializer(serializers.ModelSerializer):
         instance.ingredients = validated_data.get('ingredients', instance.ingredients)
         # instance.restaurant_id = validated_data.get('restaurant_id', instance.restaurant_id)
 
+        # Print validated_data to understand its structure
+        print("Validated Data:", validated_data)
+
         # Handle updates for extras
         extras_data = validated_data.pop('extras', None)
-        print(instance.name)
+        print("Extras Data:", extras_data)
+
         
-        print(f'in serializers :{extras_data}')
+        # print(f'in serializers :{extras_data}')
 
         if extras_data is not None:
             for extra_data in extras_data:
@@ -144,7 +150,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
                     # Handle the items
                     items_data = type_data.pop('items', [])
                     for item_data in items_data:
-                        MenuItemTypeItem.objects.create(extra=extra, **item_data)
+                        MenuItemTypeItem.objects.get_or_create(extra=extra, **item_data)
                     instance.extras.add(extra)
 
         instance.save()

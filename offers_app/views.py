@@ -7,6 +7,7 @@ from .models import Offer
 
 from .serializers import OfferCreateSerializer, OfferDeleteSerializer, OfferUpdateSerializer
 from auth_app.permissions import IsAdminOfRestaurant
+from django.shortcuts import get_object_or_404
 
 @permission_classes(IsAdminOfRestaurant)
 @api_view(['POST'])
@@ -23,13 +24,13 @@ def create_offer_and_associate(request):
             category_id = request.data.get('category_id')
 
             if menu_item_id:
-                menu_item = MenuItem.objects.get(pk=menu_item_id)
+                menu_item = get_object_or_404(MenuItem, pk=menu_item_id)
                 if not menu_item.offer :
                     menu_item.offer = offer
                     menu_item.save()
                 else: return Response({'error': 'This Item Has Offer'}, status=status.HTTP_400_BAD_REQUEST)
             elif category_id:
-                category = RestaurantCategory.objects.get(pk=category_id)
+                category = get_object_or_404(RestaurantCategory, pk=category_id)
                 if not category.offer:
                     category.offer = offer
                     category.save()

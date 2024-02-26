@@ -24,3 +24,4 @@ admin.site.register(MenuItemExtra)
 
 admin.site.register(MenuItemTypeItem)
 admin.site.register(MenuItemType)
+admin.site.register(SizeAndPrice)
