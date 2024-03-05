@@ -7,9 +7,9 @@ from payment_app.models import PaymentWay
 # from delivery_app.models import DeliveryMan
 
 class Order(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    cart = models.OneToOneField(Cart, on_delete=models.CASCADE)
+    # cart = models.OneToOneField(Cart, on_delete=models.CASCADE)
     order_status = models.CharField(max_length=255)
     notes = models.TextField(blank=True, null=True)
     delivery_man = models.ForeignKey('delivery_app.DeliveryMan', on_delete=models.CASCADE)
@@ -25,7 +25,7 @@ class Order(models.Model):
 
 
 class DeliveryAddress(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     house_number = models.CharField(max_length=255)
     post_code = models.CharField(max_length=20)
     city = models.CharField(max_length=255)
@@ -37,7 +37,7 @@ class DeliveryAddress(models.Model):
         return f"DeliveryAddress #{self.pk} - Order #{self.order.pk}"
 
 class Reservation(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     restaurant_table = models.ForeignKey(RestaurantTable, on_delete=models.CASCADE)
     total_cost = models.DecimalField(max_digits=8, decimal_places=2)
@@ -49,7 +49,7 @@ class Reservation(models.Model):
 
 
 class OrderInvoice(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     total_cost = models.DecimalField(max_digits=8, decimal_places=2)
     delivery_fee = models.DecimalField(max_digits=5, decimal_places=2)

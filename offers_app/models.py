@@ -2,7 +2,7 @@ from django.db import models
 # from restaurant_app.models import Restaurant, MenuItem, Category
 
 class Offer(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     active_in = models.DateTimeField()

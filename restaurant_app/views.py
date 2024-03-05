@@ -1,4 +1,5 @@
 import json
+
 # from urllib import request
 from rest_framework.exceptions import ValidationError
 from django.http import QueryDict
@@ -194,6 +195,8 @@ class RestaurantDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class RestaurantListViewByCity(generics.ListAPIView):
+    
+    # serializer_class = RestaurantSerializer
     serializer_class = RestaurantSerializer
 
     def get_queryset(self):
@@ -201,6 +204,7 @@ class RestaurantListViewByCity(generics.ListAPIView):
         city = get_object_or_404(City, name=city_name)
 
         queryset = Restaurant.objects.filter(city=city)
+        
 
         # Apply additional filters if provided in the query parameters
         state = self.request.query_params.get('availability')
@@ -535,6 +539,10 @@ class CityCategoriesView(generics.ListAPIView):
 
     def get_queryset(self):
         city_name = self.kwargs.get('city_name')
-        queryset = Category.objects.filter(restaurant__city__name=city_name).distinct()
+        # queryset = Category.objects.filter(restaurant__city__name=city_name).distinct()
+        queryset = Category.objects.all()
         return queryset
     
+
+
+

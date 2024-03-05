@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from cart_app.models import Cart
 from offers_app.models import Offer
 
 from restaurant_app.models import MenuItem, Restaurant, RestaurantCategory
@@ -33,3 +34,11 @@ class IsAdminOfRestaurant(permissions.BasePermission):
             return self.has_object_permission(request, view, obj)
         
         return request.user.role == 'restaurant_owner'
+    
+
+class IsCustomer(permissions.BasePermission):
+    
+    def has_object_permission(self, request, view, obj):
+        if isinstance(obj, Cart):
+            return obj.customer.user == request.user
+            

@@ -3,7 +3,7 @@ from customer_app.models import Customer
 from restaurant_app.models import MenuItem, Restaurant
 
 class Review(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     comment = models.TextField()
     rate = models.IntegerField()
@@ -14,7 +14,7 @@ class Review(models.Model):
         return f"Review #{self.pk} - {self.customer.first_name} {self.restaurant_customer.last_name}"
 
 class DeliveryReview(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     order = models.ForeignKey('order_app.Order', on_delete=models.CASCADE)
     comment = models.TextField()

@@ -30,18 +30,18 @@ def menuitem_image_path(instance, filename):
 
 
 class Restaurant(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
     logo = models.ImageField(upload_to=restaurant_logo_path, null=True)
     background = models.ImageField(upload_to=restaurant_background_path, null=True)
     state = models.BooleanField(default='True')  # open or closed
     free_delivery = models.CharField(max_length=10, null=True)
-    # categories = models.ManyToManyField('Category', blank=True)
+   
     address = models.TextField(max_length=500)
     open_in = models.CharField(max_length=5, null=True)
     close_in = models.CharField(max_length=5, null=True)
     order_modes = models.JSONField(default=list)
-    # additions = models.JSONField() ###     ######     #####     #######    #########    ####
+    
     tax = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     delivery_fee = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     minimum_order = models.DecimalField(max_digits=5, decimal_places=2, null=True)
@@ -120,7 +120,7 @@ class MenuItemTypeItem(models.Model):
 
 
 class MenuItem(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(max_length=250)
     image = models.ImageField(upload_to=menuitem_image_path, null=True)
@@ -147,7 +147,7 @@ class MenuItemAdmin(admin.ModelAdmin):
 
 
 class RestaurantTable(models.Model): # table in the restaurant 
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     table_number = models.IntegerField()
     size = models.IntegerField()
     table_status = models.BooleanField()
@@ -160,7 +160,7 @@ class RestaurantTable(models.Model): # table in the restaurant
 
 
 class MenuSection(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
 
@@ -168,7 +168,7 @@ class MenuSection(models.Model):
         return f"{self.name} - {self.restaurant.name}"
 
 class RestaurantRegion(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
 
     def __str__(self):

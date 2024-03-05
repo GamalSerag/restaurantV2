@@ -7,7 +7,7 @@ from django.db.models import Q
 class SizeAndPriceSerializer(serializers.ModelSerializer):
     class Meta:
         model = SizeAndPrice
-        fields = ('size', 'price')
+        fields = ('id', 'size', 'price')
 
 
 
@@ -53,7 +53,7 @@ class MenuItemTypeSerializer(serializers.ModelSerializer):
 
 
 class MenuItemSerializer(serializers.ModelSerializer):
-    ingredients = serializers.ListField(child=serializers.CharField())
+    ingredients = serializers.ListField(child=serializers.CharField(), required=False)
     category = serializers.PrimaryKeyRelatedField(queryset=RestaurantCategory.objects.all())
     sizes_and_prices = SizeAndPriceSerializer(many=True, read_only=True)
     # sizes_and_prices = serializers.ListSerializer(child=SizeAndPriceSerializer(), required=False)    

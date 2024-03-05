@@ -17,6 +17,7 @@ urlpatterns = [
     path('r-categories/', RestaurantCategoryListCreateView.as_view()),
     
     path('<str:city_name>/', RestaurantListViewByCity.as_view()),
+    
     path('menu-item/<int:pk>/', MenuItemDetailView.as_view(), name='menuitem-detail'),
 
     path('menu-item/add/', MenuItemCreateView.as_view(), name='menuitem-create'),

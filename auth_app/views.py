@@ -85,6 +85,7 @@ class UserLoginView(ObtainAuthToken):
             if user.role == 'restaurant_owner':
                 # Get the associated Admin profile
                 admin_profile = Admin.objects.get(user=user)
+                admin_id = admin_profile.id
                 restaurant = admin_profile.restaurant
 
                 subscription_serializer = SubscriptionSerializer(admin_profile.subscription)
@@ -99,7 +100,8 @@ class UserLoginView(ObtainAuthToken):
                     'restaurant_id': restaurant.id,
                     'restaurant_name': restaurant.name,  # Include other restaurant details as needed
                     'subscription': serialized_subscription,
-                    'is_subscribed': admin_profile.is_subscribed
+                    'is_subscribed': admin_profile.is_subscribed,
+                    'owner_id':admin_id 
                 }
             else:
                 response_data = {
@@ -172,7 +174,8 @@ class UserRoleView(APIView):
         # Check if the user is an admin
         if role == 'restaurant_owner':
             admin = user.admin_profile
+            admin_id = admin.id
             is_subscribed = admin.is_subscribed
-            return Response({'role': role, 'is_subscribed': is_subscribed}, status=status.HTTP_200_OK)
+            return Response({'role': role, 'is_subscribed': is_subscribed, 'owner_id': admin_id}, status=status.HTTP_200_OK)
         elif role == 'customer' :
             return Response({'role': role, 'first_name':first_name, 'last_name': last_name, 'email':email}, status=status.HTTP_200_OK)
