@@ -103,7 +103,7 @@ class RestaurantDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Retrieve the Restaurant instance
         restaurant_instance = self.get_object()
 
-       
+
         # Initialize the response data
         response_data = super().get(request, *args, **kwargs).data
 

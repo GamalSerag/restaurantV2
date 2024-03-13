@@ -184,6 +184,8 @@ class RestaurantCategorySerializer(serializers.ModelSerializer):
         model = RestaurantCategory
         fields = ('id','name', 'category_type','category_image', 'menu_items', 'offer', 'tax', 'is_active')
 
+        
+
     
     
     def get_offer(self, obj):
@@ -212,9 +214,20 @@ class RestaurantSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'logo','background', 'state', 'free_delivery', 'categories',
                   'address', 'open_in', 'close_in', 'order_modes', 'tax',
                      'delivery_fee', 'minimum_order', 'delivery_time', 'latitude', 'longitude', 'country', 'city', 'phone',)
+        
+        extra_kwargs = {
+            'tax': {'required': False},
+            'latitude': {'required': False},
+            'longitude': {'required': False},
+            'delivery_time': {'required': False},
+        }
 
     
     
+
+
+
+
     # def to_representation(self, instance):
     #     representation = super().to_representation(instance)
     #     # Update the categories with the filtered menu items

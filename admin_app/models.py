@@ -57,4 +57,4 @@ class AdminDoc(models.Model):
     address = models.ForeignKey(AdminAdress, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.leagal_name} - Admin #{self.admin.user.first_name} {self.admin.user.last_name}"
+        return f"{self.leagal_name} -  {self.admin.user.email}"

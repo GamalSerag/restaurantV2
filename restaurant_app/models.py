@@ -36,7 +36,7 @@ class Restaurant(models.Model):
     background = models.ImageField(upload_to=restaurant_background_path, null=True)
     state = models.BooleanField(default='True')  # open or closed
     free_delivery = models.CharField(max_length=10, null=True)
-   
+
     open_in = models.CharField(max_length=5, null=True)
     close_in = models.CharField(max_length=5, null=True)
     address = models.TextField(max_length=500)
