@@ -95,12 +95,15 @@ class UserLoginView(ObtainAuthToken):
                 response_data = {
                     'token': token.key,
                     'username': user.username,
+                    'email': user.email,
                     'role': user.role,
                     
                     'restaurant_id': restaurant.id,
                     'restaurant_name': restaurant.name,  # Include other restaurant details as needed
                     'subscription': serialized_subscription,
+                    'has_submitted_docs': admin_profile.has_submitted_docs,
                     'is_subscribed': admin_profile.is_subscribed,
+                    'is_approaved': admin_profile.is_approved,
                     'owner_id':admin_id 
                 }
             else:
@@ -176,6 +179,8 @@ class UserRoleView(APIView):
             admin = user.admin_profile
             admin_id = admin.id
             is_subscribed = admin.is_subscribed
-            return Response({'role': role, 'is_subscribed': is_subscribed, 'owner_id': admin_id}, status=status.HTTP_200_OK)
+            is_approved = admin.is_approved
+            has_submitted_docs = admin.has_submitted_docs
+            return Response({'role': role, 'is_subscribed': is_subscribed,'is_approved':is_approved,  'has_submitted_docs': has_submitted_docs,  'owner_id': admin_id}, status=status.HTTP_200_OK)
         elif role == 'customer' :
             return Response({'role': role, 'first_name':first_name, 'last_name': last_name, 'email':email}, status=status.HTTP_200_OK)

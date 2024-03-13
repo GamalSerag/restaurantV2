@@ -3,6 +3,7 @@ from rest_framework import serializers
 from offers_app.serializers import OfferUpdateSerializer
 from .models import Category, MenuItem, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, RestaurantCategory, SizeAndPrice
 from django.db.models import Q
+from drf_writable_nested.serializers import WritableNestedModelSerializer
 
 class SizeAndPriceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,7 +50,6 @@ class MenuItemTypeSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'title': {'required': False}
         }
-       
 
 
 class MenuItemSerializer(serializers.ModelSerializer):
@@ -109,51 +109,58 @@ class MenuItemSerializer(serializers.ModelSerializer):
         instance.image = validated_data.get('image', instance.image)
         instance.category = validated_data.get('category', instance.category)
         instance.ingredients = validated_data.get('ingredients', instance.ingredients)
-        # instance.restaurant_id = validated_data.get('restaurant_id', instance.restaurant_id)
 
-        # Print validated_data to understand its structure
-        print("Validated Data:", validated_data)
-
+        print('################################################################################################################################################################################################################################################################################################################################################################################################################################################################')
         # Handle updates for extras
+        print(' ')
+        print(' ')
+        print(' ')
+        # print (validated_data)
+        # print(' ')
+        # print(' ')
+        # print(' ')
         extras_data = validated_data.pop('extras', None)
-        print("Extras Data:", extras_data)
-
+        # print(extras_data)
+        # print(type(extras_data))
+        # print((extras_data[0]))
+        # print(type(extras_data[0]))
+        # print((extras_data[1]))
+        # print(type(extras_data[1]))
         
-        # print(f'in serializers :{extras_data}')
+        
+        for key, value in extras_data[0].items(): 
+            print('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV')
+            print(key, value) 
+        
+        
 
+        print(f'extras_data in serializer :::::: {extras_data[0].values}')
         if extras_data is not None:
             for extra_data in extras_data:
+                items_data = extra_data.pop('items', [])
                 extra_id = extra_data.pop('id', None)
                 if extra_id:
-                    extra_query = Q(id=extra_id)
-                    # else:
-                    #     extra_query = Q(**extra_data)
-                    extra, created = MenuItemExtra.objects.get_or_create(extra_query, defaults=extra_data)
-
-                    # Handle the items
-                    items_data = extra_data.pop('items', [])
+                    extra_instance = MenuItemExtra.objects.get(id=extra_id)
                     for item_data in items_data:
-                        MenuItemExtraItem.objects.create(extra=extra, **item_data)
-                    instance.extras.add(extra)
+                        print(item_data)
+                        # Update or create the MenuItemExtraItem instances
+                        MenuItemExtraItem.objects.update_or_create(extra=extra_instance, **item_data)
 
         # Handle updates for types
         types_data = validated_data.pop('types', None)
         if types_data is not None:
             for type_data in types_data:
                 type_id = type_data.pop('id', None)
-                if extra_id:
-                    extra_query = Q(id=type_id)
-                    # else:
-                    #     extra_query = Q(**extra_data)
-                    extra, created = MenuItemType.objects.get_or_create(extra_query, defaults=type_data)
+                if type_id:
+                    type_instance, _ = MenuItemType.objects.get_or_create(id=type_id, defaults=type_data)
 
                     # Handle the items
                     items_data = type_data.pop('items', [])
                     for item_data in items_data:
-                        MenuItemTypeItem.objects.get_or_create(extra=extra, **item_data)
-                    instance.extras.add(extra)
+                        MenuItemTypeItem.objects.update_or_create(extra=type_instance, **item_data)
+                    instance.types.add(type_instance)
 
-        instance.save()
+        instance.save()  # Save the instance after all updates
         return instance
     
 

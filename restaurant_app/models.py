@@ -37,9 +37,9 @@ class Restaurant(models.Model):
     state = models.BooleanField(default='True')  # open or closed
     free_delivery = models.CharField(max_length=10, null=True)
    
-    address = models.TextField(max_length=500)
     open_in = models.CharField(max_length=5, null=True)
     close_in = models.CharField(max_length=5, null=True)
+    address = models.TextField(max_length=500)
     order_modes = models.JSONField(default=list)
     
     tax = models.DecimalField(max_digits=5, decimal_places=2, null=True)
@@ -101,7 +101,7 @@ class MenuItemExtraItem(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"{self.name}"
+        return f"{self.id} - {self.name}"
     
 
 class MenuItemType(models.Model):
@@ -138,6 +138,8 @@ class MenuItem(models.Model):
     def get_sizes_and_prices_display(self):
         sizes_and_prices = SizeAndPrice.objects.filter(menu_item=self)
         return ", ".join([f"{size.size} - ${size.price}" for size in sizes_and_prices])
+    
+    
 
 
 class MenuItemAdmin(admin.ModelAdmin):

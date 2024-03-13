@@ -2,7 +2,7 @@ from rest_framework import permissions
 from cart_app.models import Cart
 from offers_app.models import Offer
 
-from restaurant_app.models import MenuItem, Restaurant, RestaurantCategory
+from restaurant_app.models import MenuItem, MenuItemExtra, Restaurant, RestaurantCategory
 
 class IsAdminOfRestaurant(permissions.BasePermission):
    
@@ -15,10 +15,13 @@ class IsAdminOfRestaurant(permissions.BasePermission):
             return obj.restaurant.admin.user == request.user
         
         elif isinstance(obj, Offer):
-           return obj.restaurant.admin.user == request.user
+            return obj.restaurant.admin.user == request.user
         
         elif isinstance(obj, RestaurantCategory):
-           return obj.restaurant.admin.user == request.user
+            return obj.restaurant.admin.user == request.user
+        
+        elif isinstance(obj, MenuItemExtra):
+            return obj.restaurant.admin.user == request.user
 
     def has_permission(self, request, view):
         if request.method == 'POST':

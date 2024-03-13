@@ -184,7 +184,7 @@ class CartItemUpdateView(generics.UpdateAPIView):
         # Get the updated quantity from the request data
         new_quantity = request.data.get('quantity')
         
-       
+        
         if new_quantity is not None:
             # Calculate the difference between the new and old quantities
             quantity_diff = int(new_quantity) - instance.quantity

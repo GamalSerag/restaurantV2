@@ -125,3 +125,23 @@
      'extras[1][items][0][name]': 'more milk ', 'extras[1][items][0][price]': '2.00',
       'types': 'null', 'ingredients[0]': 'tometos', 'ingredients[1]': 'milk',
        'ingredients[2]': 'egg', 'category': '67', 'restaurant_id': '1'}>
+
+
+
+
+Data sent to the serializer : <QueryDict: {'name': ['Pizza 7ankaliso chaaaaan'], 'description': ['lorem lorem'],
+ 'sizes_and_prices[0][size]': ['big'], 'sizes_and_prices[0][price]': ['10.00'],
+  'extras[0][title]': ['extra1'], 'extras[0][extra_id]': ['33'],
+ 'extras[0][items][0][id]': ['4'], 'extras[0][items][0][name]': ['egg'], 'extras[0][items][0][price]': ['20.00'],
+  'extras[1][title]': ['extra 2'], 'extras[1][extra_id]': ['34'], 'extras[1][items][0][id]': ['5'],
+   'extras[1][items][0][name]': ['more milk '], 'extras[1][items][0][price]': ['2.00'],
+    'extras[1][items][1][name]': ['more milk '], 'extras[1][items][1][price]': ['2.00'], 'ingredients[0]': ['tometos'],
+     'ingredients[1]': ['milk'], 'ingredients[2]': ['egg'], 'category': ['67'], 'restaurant_id': ['1']}>
+restaurant = One
+category_id = 67
+restaurant_category = 7ankalies pizza ((Pizza)) - R:One
+:::::::From views Extras data : [{'id': None, 'title': None, 'items': []}]
+Validated Data: {'name': 'Pizza 7ankaliso chaaaaan', 'description': 'lorem lorem', 'category': <RestaurantCategory: 7ankalies pizza ((Pizza)) - R:One>, 'ingredients': ['tometos', 'milk', 'egg'], 'restaurant_id': 1, 'extras': [OrderedDict(), OrderedDict()], 'restaurant': <Restaurant: One>}
+Extras Data: [OrderedDict(), OrderedDict()]
+MenuItem data after processing: {'_state': <django.db.models.base.ModelState object at 0x00000255731FC860>, 'id': 114, 'created_at': datetime.datetime(2024, 2, 21, 10, 51, 10, 624691, tzinfo=datetime.timezone.utc), 'name': 'Pizza 7ankaliso chaaaaan', 'description': 'lorem lorem', 'image': <ImageFieldFile: menuitems/Pizza 7ankaliso chan/m-pizza1.png>, 'category_id': 67, 'ingredients': ['tometos', 'milk', 'egg'], 'restaurant_id': 1, 'offer_id': None}
+[06/Mar/2024 09:18:24] "PUT /api/restaurants/menu-item/edit/114/ HTTP/1.1" 200 450

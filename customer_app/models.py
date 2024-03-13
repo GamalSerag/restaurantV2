@@ -15,6 +15,7 @@ class Customer(models.Model):
     # provider = models.CharField(max_length=255, null=True, blank=True)
     is_active_phone = models.BooleanField(default=False)
     favorites = models.ManyToManyField(Restaurant, blank=True)
+    # address = 
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     

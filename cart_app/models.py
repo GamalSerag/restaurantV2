@@ -59,22 +59,28 @@ class CartItem(models.Model):
         return f"CartItem #{self.pk}"
     
 
+class CartItemInline(admin.TabularInline):
+    model = CartItem
+    extra = 0
+
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
     list_display = ('get_cart_title', 'total_price', 'customer', 'restaurant', 'order_mode')
-    
+
     def get_cart_title(self, obj):
         return f"Cart #{obj.pk} "
     get_cart_title.short_description = 'Title'
 
+    inlines = [CartItemInline]
+
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
     list_display = ('get_cart_item_title', 'quantity', 'total_price_before_discount', 'total_price_after_discount', 'price', 'cart', 'get_restaurant_name')
-    
+
     def get_cart_item_title(self, obj):
         return f"CartItem #{obj.pk} - {obj.menu_item.name} - {obj.cart.restaurant.name} - Quantity: {obj.quantity} - {obj.cart.customer.first_name} {obj.cart.customer.last_name}"
-    
+
     def get_restaurant_name(self, obj):
         return obj.cart.restaurant.name
-    
+
     get_cart_item_title.short_description = 'Title'

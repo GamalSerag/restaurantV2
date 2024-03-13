@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import AdminRestaurantDetailView, CategoriesView, MenuItemCreateView, MenuItemDetailView, MenuItemUpdateView, RestaurantCategoryDeleteView, RestaurantCategoryListCreateView, RestaurantCategoryUpdateView,RestaurantListViewByCity, RestaurantListView, RestaurantDetailView, CityCategoriesView
+from .views import AdminRestaurantDetailView, CategoriesView, MenuItemCreateView, MenuItemDetailView, MenuItemExtraDeleteView, MenuItemExtraItemDeleteView, MenuItemTypeDeleteView, MenuItemTypeItemDeleteView, MenuItemUpdateView, RestaurantCategoryDeleteView, RestaurantCategoryListCreateView, RestaurantCategoryUpdateView,RestaurantListViewByCity, RestaurantListView, RestaurantDetailView, CityCategoriesView
 urlpatterns = [
     
     path('', RestaurantListView.as_view()),
@@ -21,6 +21,14 @@ urlpatterns = [
     path('menu-item/<int:pk>/', MenuItemDetailView.as_view(), name='menuitem-detail'),
 
     path('menu-item/add/', MenuItemCreateView.as_view(), name='menuitem-create'),
-    path('menu-item/delete/<int:pk>/', MenuItemUpdateView.as_view(), name='menuitem-create'),
-    path('menu-item/edit/<int:pk>/', MenuItemUpdateView.as_view(), name='menuitem-create'),
+    path('menu-item/delete/<int:pk>/', MenuItemUpdateView.as_view(), name='menuitem-delete'),
+    path('menu-item/edit/<int:pk>/', MenuItemUpdateView.as_view(), name='menuitem-edit'),
+    
+    path('menu-item-extra/delete/<int:pk>/', MenuItemExtraDeleteView.as_view(), name='menuitem-extra-delete'),
+    path('menu-item-extra-item/delete/<int:pk>/', MenuItemExtraItemDeleteView.as_view(), name='menuitem-extra-item-delete'),
+
+    path('menu-item-type/delete/<int:pk>/', MenuItemTypeDeleteView.as_view(), name='menuitem-extra-delete'),
+    path('menu-item-type-item/delete/<int:pk>/', MenuItemTypeItemDeleteView.as_view(), name='menuitem-extra-item-delete'),
+
+
 ]
