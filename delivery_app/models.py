@@ -4,7 +4,7 @@ from customer_app.models import Customer
 
 
 class DeliveryMan(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
@@ -15,7 +15,7 @@ class DeliveryMan(models.Model):
 
 
 class Delivery(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     start_at = models.DateTimeField()
     end_at = models.DateTimeField()
     delivery_status = models.CharField(max_length=255)
@@ -28,7 +28,7 @@ class Delivery(models.Model):
         return f"Delivery #{self.pk} - Order #{self.order.pk}"
 
 class DeliveryRoute(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     delivery = models.ForeignKey(Delivery, on_delete=models.CASCADE)
     delivery_fee = models.DecimalField(max_digits=5, decimal_places=2)
     start_latitude = models.FloatField()

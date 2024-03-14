@@ -2,7 +2,8 @@ from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
 from admin_app.models import Admin
 from customer_app.models import Customer
-from restaurant_app.models import OrderMode, Restaurant
+from payment_app.serializers import SubscriptionSerializer
+from restaurant_app.models import Restaurant
 from restaurant_app.serializers import RestaurantSerializer
 from .models import User
 
@@ -14,6 +15,7 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import IsAuthenticated
 import logging
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,13 @@ class UserRegistrationView(APIView):
             email = request.data.get('email')
 
             if user.role == 'customer':
-                Customer.objects.create(user=user, email=email)
+                phone_number = request.data.get('phone_number')
+                first_name = request.data.get('first_name')
+                last_name = request.data.get('last_name')
+
+                user.first_name = first_name
+                user.last_name = last_name
+                Customer.objects.create(user=user, email=email, phone_number=phone_number, first_name=first_name, last_name=last_name,)
             elif user.role == 'restaurant_owner':
 
                 phone_number = request.data.get('admin_phone_number')
@@ -77,18 +85,26 @@ class UserLoginView(ObtainAuthToken):
             if user.role == 'restaurant_owner':
                 # Get the associated Admin profile
                 admin_profile = Admin.objects.get(user=user)
+                admin_id = admin_profile.id
                 restaurant = admin_profile.restaurant
+
+                subscription_serializer = SubscriptionSerializer(admin_profile.subscription)
+                serialized_subscription = subscription_serializer.data
 
                 # Include the restaurant information in the response
                 response_data = {
                     'token': token.key,
                     'username': user.username,
+                    'email': user.email,
                     'role': user.role,
                     
                     'restaurant_id': restaurant.id,
                     'restaurant_name': restaurant.name,  # Include other restaurant details as needed
-                    'subscription': admin_profile.subscription,
-                    'is_subscribed': admin_profile.is_subscribed
+                    'subscription': serialized_subscription,
+                    'has_submitted_docs': admin_profile.has_submitted_docs,
+                    'is_subscribed': admin_profile.is_subscribed,
+                    'is_approaved': admin_profile.is_approved,
+                    'owner_id':admin_id 
                 }
             else:
                 response_data = {
@@ -112,3 +128,59 @@ class UserLogoutView(APIView):
     def post(self, request):
         logout(request)
         return Response({'detail': 'Successfully logged out.'})
+    
+class UserRoleView(APIView):
+    permission_classes = [IsAuthenticated]
+    @extend_schema(
+        description="Get the role and additional information of the authenticated user.",
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "role": {"type": "string", "enum": ["customer"]},
+                    "first_name": {"type": "string"},
+                    "last_name": {"type": "string"},
+                    "email": {"type": "string"}
+                }
+            },
+            401: {
+                "description": "Invalid token",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": { "detail":{ "type": "string" }  },
+                            
+                            "example": {"detail": "Invalid token"}
+                        }
+                    }
+                }
+            }
+        },
+        parameters=[
+            OpenApiParameter(
+                name="Authorization",
+                location=OpenApiParameter.HEADER,
+                required=True,
+                description="Token obtained after successful authentication"
+            )
+        ]
+    )
+
+    def get(self, request):
+        user = request.user
+        role = user.role
+        first_name = user.first_name
+        last_name = user.last_name
+        email = user.email
+
+        # Check if the user is an admin
+        if role == 'restaurant_owner':
+            admin = user.admin_profile
+            admin_id = admin.id
+            is_subscribed = admin.is_subscribed
+            is_approved = admin.is_approved
+            has_submitted_docs = admin.has_submitted_docs
+            return Response({'role': role, 'is_subscribed': is_subscribed,'is_approved':is_approved,  'has_submitted_docs': has_submitted_docs,  'owner_id': admin_id}, status=status.HTTP_200_OK)
+        elif role == 'customer' :
+            return Response({'role': role, 'first_name':first_name, 'last_name': last_name, 'email':email}, status=status.HTTP_200_OK)

@@ -3,7 +3,7 @@ from restaurant_app.models import Restaurant, RestaurantRegion
 
 
 class Employee(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
@@ -18,7 +18,7 @@ class Employee(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 class Shift(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     from_time = models.DateTimeField()
     to_time = models.DateTimeField()
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
@@ -29,7 +29,7 @@ class Shift(models.Model):
 
 
 class EmployeePerformance(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     notes = models.TextField(blank=True, null=True)
     evaluation_date = models.DateField()       ####$$$    ?   $$$#####

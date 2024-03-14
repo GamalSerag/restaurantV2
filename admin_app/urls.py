@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import AdminViewSet
+from .views import AdminDocSubmitView, AdminView
 
 urlpatterns = [
-    path('admins/', AdminViewSet.as_view({'get': 'list'}), name='admin-list'),
+    path('<int:pk>/', AdminView.as_view(), name='admin-details'),
+    path('admin-docs/', AdminDocSubmitView.as_view(), name='submit_admin_doc'),
     
 ]

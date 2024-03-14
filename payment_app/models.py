@@ -5,7 +5,7 @@ from customer_app.models import Customer
 
 
 class PaymentWay(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
 
@@ -26,7 +26,7 @@ class Subscription(models.Model):
 class PaymentTransaction(models.Model):
     payment_way = models.ForeignKey(PaymentWay, on_delete=models.CASCADE)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     order = models.ForeignKey('order_app.Order', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=8, decimal_places=2)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)

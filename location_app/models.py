@@ -8,7 +8,7 @@ def country_logo_path(instance, filename):
 
 
 class Country(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
     logo = models.ImageField(upload_to=country_logo_path, null=True)
 
@@ -16,7 +16,7 @@ class Country(models.Model):
         return self.name
 
 class City(models.Model):
-    timestamps = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
     
