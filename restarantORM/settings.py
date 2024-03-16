@@ -187,4 +187,4 @@ AUTHENTICATION_BACKENDS = [
     'rest_framework.authentication.TokenAuthentication',
 ]
 
-# SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = True
