@@ -186,3 +186,5 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'rest_framework.authentication.TokenAuthentication',
 ]
+
+SECURE_SSL_REDIRECT = True
