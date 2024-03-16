@@ -36,7 +36,7 @@ class AdminDocSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdminDoc
-        fields = ['leagal_name', 'ID_photo', 'business_register', 'address']
+        fields = ['leagal_name','phone', 'ID_photo', 'business_register', 'address']
 
     def create(self, validated_data):
         address_data = validated_data.pop('address')

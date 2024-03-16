@@ -52,6 +52,7 @@ class AdminAdress(models.Model):
 class AdminDoc(models.Model):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE, related_name='admin_docs')
     leagal_name = models.CharField()
+    phone = models.CharField()
     ID_photo = models.FileField(upload_to =admin_docs_image_path)
     business_register = models.FileField(upload_to =admin_docs_image_path)
     address = models.ForeignKey(AdminAdress, on_delete=models.CASCADE)

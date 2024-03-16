@@ -60,11 +60,12 @@ class CartSerializer(serializers.ModelSerializer):
     
 
     def get_discount_values(self, obj):
-        discount_values = {}
+        discount_values = []
         for cart_item in obj.items.all():
             # Calculate the difference between price and price_after_discount
             discount_amount = cart_item.total_price_before_discount - cart_item.total_price_after_discount
-            # Add cart item id as key and discount amount as value to the dictionary
-            discount_values[f'{cart_item.menu_item.name}'] = discount_amount
+            # Check if there's a discount
+            if discount_amount > 0:
+                # Add cart item name and discount amount as a dictionary to the list
+                discount_values.append({'name': cart_item.menu_item.name, 'discount_amount': discount_amount})
         return discount_values
-
