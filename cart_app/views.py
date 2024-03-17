@@ -265,7 +265,8 @@ class CartDetailsView(APIView):
 
         # Get the restaurant ID from the request data
         restaurant_id = request.query_params.get('restaurant_id')
-        restaurant = Restaurant.objects.get(pk=restaurant_id)
+        
+        restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
 
         order_mode = request.query_params.get('order_mode')
 
