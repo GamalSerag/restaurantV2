@@ -16,7 +16,7 @@ class Admin(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, null=True, blank= True)
     is_subscribed = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False)
-    is_rejected = models.BooleanField(default=False)
+    # is_rejected = models.BooleanField(default=False)
     has_submitted_docs = models.BooleanField(default=False)
 
     def __str__(self):
