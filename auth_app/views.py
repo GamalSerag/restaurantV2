@@ -177,10 +177,14 @@ class UserRoleView(APIView):
         # Check if the user is an admin
         if role == 'restaurant_owner':
             admin = user.admin_profile
-            admin_id = admin.id
-            is_subscribed = admin.is_subscribed
-            is_approved = admin.is_approved
-            has_submitted_docs = admin.has_submitted_docs
-            return Response({'role': role, 'is_subscribed': is_subscribed,'is_approved':is_approved,  'has_submitted_docs': has_submitted_docs,  'owner_id': admin_id}, status=status.HTTP_200_OK)
-        elif role == 'customer' :
+            return Response({
+                                'role': role,
+                                'is_subscribed': admin.is_subscribed,
+                                'is_approved': admin.is_approved,
+                                'is_rejected': admin.is_rejected,
+                                'has_submitted_docs': admin.has_submitted_docs,
+                                'owner_id': admin.id,
+                            }
+                            ,status=status.HTTP_200_OK) 
+        else :
             return Response({'role': role, 'first_name':first_name, 'last_name': last_name, 'email':email}, status=status.HTTP_200_OK)
