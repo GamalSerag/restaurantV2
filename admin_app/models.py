@@ -16,7 +16,7 @@ class Admin(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, null=True, blank= True)
     is_subscribed = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False)
-    # is_rejected = models.BooleanField(default=False)
+    is_rejected = models.BooleanField(default=False)
     has_submitted_docs = models.BooleanField(default=False)
 
     def __str__(self):
@@ -53,7 +53,7 @@ class AdminAdress(models.Model):
 class AdminDoc(models.Model):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE, related_name='admin_docs')
     leagal_name = models.CharField()
-    # phone = models.CharField(blank=True, null=True)
+    phone = models.CharField(blank=True, null=True)
     ID_photo = models.FileField(upload_to =admin_docs_image_path)
     business_register = models.FileField(upload_to =admin_docs_image_path)
     address = models.ForeignKey(AdminAdress, on_delete=models.CASCADE)
