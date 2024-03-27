@@ -41,7 +41,7 @@ def admin_docs_image_path(instance, filename):
     admin_name = instance.leagal_name.replace(" ", "_")
     # Use the admin's legal name as the folder name
     return f'admin_docs/{admin_name}/{filename}'
-
+    
 
 class AdminAdress(models.Model):
     line1 = models.CharField()

@@ -48,6 +48,8 @@ INSTALLED_APPS = [
 
     'multiselectfield',
     'drf_spectacular',
+    'djstripe',
+    'corsheaders',
 
     #######
     'auth_app',
@@ -68,13 +70,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',  # Place CSRF middleware here
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # After CSRF middleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
 ]
 
 ROOT_URLCONF = 'restarantORM.urls'
@@ -163,7 +165,8 @@ MEDIA_URL = '/media/'
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.1.8:8300",  # Add the URL of your React frontend
+    "http://192.168.1.37:8200",  # Add the URL of your React frontend
+    "http://localhost:8200"
 ]
 
 # Optional: Allow credentials (cookies, authentication headers, etc.)
@@ -188,3 +191,33 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # SECURE_SSL_REDIRECT = True
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'restaurant.mail.send@gmail.com'
+EMAIL_HOST_PASSWORD = 'lnpb ximv hstv ulrn'
+
+
+
+
+# Stripe API keys
+STRIPE_TEST_PUBLIC_KEY = 'pk_test_51Og4O2BNQnmEJIQAPQvXj0Zrrz1mASYAftLVPGSTDY8a392W6nsmwHPAEZv7VtZ30HzO6AQhVRrW86ydtSxA8vKl00Vbcgp7Re'
+STRIPE_TEST_SECRET_KEY = 'sk_test_51Og4O2BNQnmEJIQAohwj56aaIA9nPovsbDq0BzDAHNHwz5BFooStxW80ovQKcNMWaiPDQAzLdzWHkhClqPqgFNgZ00qA4x0oYX'
+# STRIPE_LIVE_PUBLIC_KEY = 'your_live_public_key'
+# STRIPE_LIVE_SECRET_KEY = 'your_live_secret_key'
+
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
+
+CSRF_TRUSTED_ORIGINS = ["http://192.168.1.37:8200", "http://localhost:8000", "http://localhost:8200"]
+
+CSRF_COOKIE_NAME = 'csrftoken'  # Default CSRF cookie name
+CSRF_COOKIE_SECURE = False  # Recommended for production to secure cookies over HTTPS
+# CSRF_COOKIE_HTTPONLY = True  # Recommended to prevent client-side JavaScript access
+
+
+SESSION_COOKIE_SAMESITE = False
+SESSION_COOKIE_DOMAIN = "http://192.168.1.37:8200"
+CORS_ALLOW_CREDENTIALS = True

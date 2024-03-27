@@ -13,7 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from restaurant_app.models import MenuItem, Restaurant, SizeAndPrice, MenuItemTypeItem, MenuItemExtraItem
 from .models import Cart, CartItem
-from .serializers import CartItemSerializer, CartSerializer
+from .serializers import CartItemSerializer, CartSerializer, CartItemSerializerNoimage, GetCartItemSerializer
 
 class CartItemCreateView(APIView):
     permission_classes = [IsAuthenticated, IsCustomer]
@@ -130,7 +130,7 @@ class CartItemCreateView(APIView):
             existing_cart_item.save()
             print(f"<<<<<>><><><><>cart.total_price after : {existing_cart_item.cart.total_price}")
             # Serialize existing cart item data
-            serializer = CartItemSerializer(existing_cart_item)
+            serializer = CartItemSerializerNoimage(existing_cart_item)
         else:
 
             try:    
@@ -151,7 +151,7 @@ class CartItemCreateView(APIView):
                 )
                 # cart_item.cart.total_price += total_price_after_discount
                 # Serialize cart item data
-                serializer = CartItemSerializer(cart_item)
+                serializer = CartItemSerializerNoimage(cart_item)
             
                 # Update cart total price
                 cart = Cart.objects.get(pk=request.data.get('cart_id'))
@@ -173,7 +173,7 @@ class CartItemCreateView(APIView):
 
 class CartItemUpdateView(generics.UpdateAPIView):
     queryset = CartItem.objects.all()
-    serializer_class = CartItemSerializer
+    serializer_class = CartItemSerializerNoimage
 
     def update(self, request, *args, **kwargs):
         print(request.data)
@@ -212,7 +212,9 @@ class CartItemUpdateView(generics.UpdateAPIView):
 
         return Response(serializer.data)
 
-
+class CartItemRetieveView(generics.RetrieveAPIView):
+    queryset = CartItem.objects.all()
+    serializer_class = GetCartItemSerializer
 
 
 class CartCreateView(generics.CreateAPIView):
@@ -260,6 +262,8 @@ class CartDetailsView(APIView):
     permission_classes = [IsCustomer]
     
     def get(self, request):
+        if request.user.role != 'customer':
+            return Response({'error': 'Only customers can access cart details.'}, status=status.HTTP_403_FORBIDDEN)
         # Get the authenticated user's customer profile
         customer = request.user.customer_profile
 
@@ -291,14 +295,14 @@ class CartDetailsView(APIView):
                     return Response({"error": "Invalid order mode. Choose from 'delivery', 'pickup', or 'dine_in'."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Serialize the cart and return the response
-        serializer = CartSerializer(cart)
+        serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data)
 
 
 
 class CartItemDeleteView(generics.DestroyAPIView):
     queryset = CartItem.objects.all()
-    serializer_class = CartItemSerializer
+    serializer_class = CartItemSerializerNoimage
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

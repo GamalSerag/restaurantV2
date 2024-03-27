@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from offers_app.serializers import OfferUpdateSerializer
-from .models import Category, MenuItem, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, RestaurantCategory, SizeAndPrice
+from .models import Category, CategoryAdminRequest, MenuItem, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, RestaurantCategory, SizeAndPrice
 from django.db.models import Q
 from drf_writable_nested.serializers import WritableNestedModelSerializer
 
@@ -168,6 +168,36 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ('id', 'name', 'image')
+        ordering = ['id']
+
+
+class CategoryAdminRequestSerializer(serializers.ModelSerializer):
+
+    requested_by = serializers.SerializerMethodField()
+
+    def get_requested_by(self, obj):
+        return f"{obj.requested_by.first_name} {obj.requested_by.last_name}"
+    
+    def get_image(self, obj):
+        # Customize how image URLs are generated
+        return self.context['request'].build_absolute_uri(obj.image.url) if obj.image else None
+    
+    class Meta:
+        model = CategoryAdminRequest
+        fields = ['id', 'name', 'requested_by', 'description', 'image', 'is_accepted']
+
+
+class CategoryAdminRequestRejectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CategoryAdminRequest
+        fields = ['id', 'superadmin_notes', 'is_rejected']
+        read_only_fields = ['id', 'superadmin_notes']
+
+    def update(self, instance, validated_data):
+        instance.is_rejected = True
+        instance.superadmin_notes = validated_data.get('superadmin_notes', instance.superadmin_notes)
+        instance.save()
+        return instance
 
 
 
@@ -182,9 +212,7 @@ class RestaurantCategorySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = RestaurantCategory
-        fields = ('id','name', 'category_type','category_image', 'menu_items', 'offer', 'tax', 'is_active')
-
-        
+        fields = ('id','name', 'category_type','category_image', 'menu_items', 'offer', 'tax', 'is_active') 
 
     
     

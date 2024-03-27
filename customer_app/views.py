@@ -7,15 +7,22 @@ from .models import Customer
 from .serializers import CustomerSerializer, FavoriteRestaurantSerializer
 from rest_framework.permissions import IsAuthenticated
 
-class CustomerViewSet(generics.RetrieveAPIView):
+class CustomerViewSet(generics.ListAPIView):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Customer.objects.filter(user=user)
+        return super().get_queryset()
 
 
 
 
 class AddFavoriteRestaurantView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
     serializer_class = CustomerSerializer
     
     def patch(self, request, *args, **kwargs):
@@ -44,6 +51,7 @@ class AddFavoriteRestaurantView(generics.UpdateAPIView):
     
 
 class FavoriteRestaurantListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
     serializer_class = FavoriteRestaurantSerializer
 
     def get_queryset(self):

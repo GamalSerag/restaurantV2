@@ -1,5 +1,6 @@
 import json
 from django.db import models
+# from admin_app.models import Admin
 from location_app.models import City, Country
 from django.contrib.postgres.fields import ArrayField
 from multiselectfield import MultiSelectField
@@ -21,6 +22,10 @@ def restaurant_background_path(instance, filename):
 def category_image_path(instance, filename):
     # This function will be used to generate the upload path
     return f'category/{instance.name}/{filename}'
+
+def category_admin_request_image_path(instance, filename):
+    # This function will be used to generate the upload path
+    return f'category/admin_request/{instance.name}/{filename}'
 
 def menuitem_image_path(instance, filename):
     # This function will be used to generate the upload path
@@ -52,6 +57,9 @@ class Restaurant(models.Model):
     city = models.ForeignKey(City, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15 , null=True)
 
+    class Meta:
+        ordering = ['created_at']
+
     def __str__(self):
         return self.name
 
@@ -59,10 +67,28 @@ class Restaurant(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to=category_image_path)
+    class Meta:
+        ordering = ['id']
 
     def __str__(self):
         return self.name
     
+class CategoryAdminRequest(models.Model):
+    name = models.CharField(max_length=255)
+    requseted_at = models.DateTimeField(auto_now_add=True)
+    requested_by  = models.ForeignKey('admin_app.Admin', on_delete=models.CASCADE)
+    description = models.TextField(max_length=255)
+    image = models.ImageField(upload_to=category_admin_request_image_path)
+    is_accepted = models.BooleanField(default='False')
+    is_rejected = models.BooleanField(default='False')
+    superadmin_notes = models.TextField(null=True)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return self.name
+
 
 class RestaurantCategory(models.Model):
     name = models.CharField(max_length=50)
@@ -131,6 +157,9 @@ class MenuItem(models.Model):
     offer = models.OneToOneField(Offer, on_delete=models.SET_NULL, null=True, blank=True)
     extras = models.ManyToManyField(MenuItemExtra, blank=True)
     types = models.ManyToManyField(MenuItemType, blank=True)
+
+    class Meta:
+        ordering = ['id']
 
     def __str__(self):
         return f"{self.name} - {self.restaurant.name}"

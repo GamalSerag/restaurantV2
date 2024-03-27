@@ -4,11 +4,12 @@ from auth_app.serializers import UserSerializer
 from restaurant_app.models import Restaurant
 
 class CustomerSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    # user = UserSerializer()
 
     class Meta:
         model = Customer
-        fields = '__all__'
+        
+        exclude = ['user', 'latitude', 'longitude', 'is_active_phone', 'favorites']
 
 
 class FavoriteRestaurantSerializer(serializers.ModelSerializer):
