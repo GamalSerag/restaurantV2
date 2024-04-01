@@ -1,22 +1,25 @@
+from datetime import timezone
 from django.conf import settings
 from rest_framework import generics, views
-
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from django.views import View
-# from djstripe.models import PaymentIntent
-from stripe import PaymentIntent
 import stripe
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
-from cart_app.models import Cart
 from order_app.serializers import DeliveryDetailsSerializer, OrderInvoiceSerializer, OrderSerializer
+from order_app.utils import send_order_placed_email, send_order_status_changed_email
 from .models import DeliveryDetails, Order, OrderInvoice
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.exceptions import ErrorDetail
 from django.http import FileResponse
 from  rest_framework.permissions import IsAuthenticated
+from auth_app.permissions import IsAdminOfRestaurant, IsCustomer
+from rest_framework.pagination import PageNumberPagination
 # from django_cron import CronJobBase, Schedule
+
+stripe.api_key = settings.STRIPE_TEST_SECRET_KEY 
 
 def download_pdf(request):
     pdf_path = 'D:/books/Two Scoops of Django 3.x_ Best Practices for the Django Web Framework by Daniel Feldroy.pdf'
@@ -37,6 +40,23 @@ class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = OrderSerializer
 
 
+class GetOrderByClientSecretView(views.APIView):
+    @csrf_exempt  # Use this decorator if CSRF protection is enabled
+    def post(self, request, *args, **kwargs):
+        print(request.body)
+        payment_intent_id = request.data.get('payment_intent_id')  # Assuming client_secret is sent in the request data
+
+        if payment_intent_id:
+            try:
+                order = Order.objects.get(payment_intent_id=payment_intent_id)
+                serializer = OrderSerializer(order)  # Use your serializer to serialize the order data
+                return JsonResponse(serializer.data)
+            except Order.DoesNotExist:
+                return JsonResponse({'error': 'Order not found'}, status=404)
+        else:
+            return JsonResponse({'error': 'Client secret not provided'}, status=400)
+
+
 class DeliveryDetailsListCreateView(generics.ListCreateAPIView):
     queryset = DeliveryDetails.objects.all()
     serializer_class = DeliveryDetailsSerializer
@@ -53,30 +73,33 @@ class PaymentIntentCreateView(View):
         order_id = request.GET.get('order_id')
         if not order_id:
             return JsonResponse({'error': 'Order ID not provided'}, status=400)
-        stripe.api_key = settings.STRIPE_TEST_SECRET_KEY  # Or use your live secret key for production
+        stripe.api_key = settings.STRIPE_TEST_SECRET_KEY  
         try:
             order = Order.objects.get(id=order_id)
-            cart_total_price = order.cart.total_price  # Fetch the total price from the related Cart
-            
+
+            cart = order.cart
+            if not cart:
+                return JsonResponse({'error': 'Cart not found'}, status=404)
+            cart_total_price = cart.total_price  # Fetch the total price from the related Cart
+
 
             intent = stripe.PaymentIntent.create(
                 amount=int(cart_total_price * 100),  # Convert to cents (Stripe uses cents)
-                currency='usd',  # Adjust the currency as needed
-                # confirm=True,  # Confirm the PaymentIntent immediately
-                # payment_method_types=['card'],
+                currency='usd',
                 automatic_payment_methods={
                 'enabled': True,  # Set to True to enable automatic payment methods that require redirects
-                # 'allow_redirects': 'never',  # Allow redirects for supported payment methods
             },
                 metadata={'order_id': str(order_id)},  # Metadata for tracking
-                # return_url='http://192.168.1.37:8200/restaurant'
             )
 
-            # Update the order's payment_intent_id field with the PaymentIntent ID
+            #Update the order's payment_intent_id field with the PaymentIntent ID
+            
             order.payment_intent_id = intent.id
+            client_secret = intent.client_secret
+            order.payment_intent_secret = client_secret
             order.save()
 
-            client_secret = intent.client_secret
+            
             return JsonResponse({'clientSecret': client_secret})
 
         except Order.DoesNotExist:
@@ -87,11 +110,10 @@ class PaymentIntentCreateView(View):
 
 @csrf_exempt
 def stripe_webhook(request):
-    # print(request.body)
     # Retrieve the webhook event data from the request
     payload = request.body
     sig_header = request.headers['Stripe-Signature']
-    endpoint_secret = 'whsec_238d40800eaba7cfea949b206171b2019d1e1e3677463dc17b5bd05abd60391a'  # Replace with your actual webhook secret
+    endpoint_secret = 'whsec_238d40800eaba7cfea949b206171b2019d1e1e3677463dc17b5bd05abd60391a'
 
     # Verify the webhook signature
     try:
@@ -113,10 +135,13 @@ def stripe_webhook(request):
         try:
             order = Order.objects.get(pk=order_id)
             # Update order status or any other relevant details
-            order.order_status = 'paid'
-            # order.cart = None
+            order.payment_order_status = 'paid'
+            order.order_status = 'confirmed'
             order.save()
             order.cart.delete()
+
+            send_order_placed_email(order.customer.email, order_id)
+
             return JsonResponse({'message': 'Order updated successfully'})
         except Order.DoesNotExist:
             return JsonResponse({'error': 'Order not found'}, status=404)
@@ -130,7 +155,13 @@ def stripe_webhook(request):
 
 
 class CheckCartOrderView(View):
-    authintication_classes = [IsAuthenticated]  # Disable authentication classes
+
+    '''
+
+    This view will check if this order have a cart : if True then get the order details
+
+    '''
+    authintication_classes = [IsAuthenticated, IsCustomer]  # Disable authentication classes
     def get(self, request):
         cart_id = request.GET.get('cart_id')  # Assuming the cart ID is passed as a query parameter
         if not cart_id:
@@ -146,7 +177,7 @@ class CheckCartOrderView(View):
                 'notes': order.notes,
                 'payment_way': order.payment_way,
                 'order_mode': order.order_mode,
-                'delivery_or_pickup_time': order.delivery_or_pickup_time.isoformat() if order.delivery_or_pickup_time else None,
+                'selected_order_time': order.selected_order_time.isoformat() if order.selected_order_time else None,
                 'coupon_code': order.coupon_code,
                 'total_price': str(order.total_price),
                 'customer': order.customer.id,
@@ -173,7 +204,6 @@ class CheckCartOrderView(View):
             return JsonResponse({'cart_has_order': False,'message': 'No order found for this cart. You can create a new order.'})
         
 
-
 class OrderPatchUpdateView(views.APIView):
     def patch(self, request, pk):
         try:
@@ -186,3 +216,111 @@ class OrderPatchUpdateView(views.APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class OrderPagination(PageNumberPagination):
+    page_size = 2  # Set the page size as needed
+    page_size_query_param = 'page_size'
+    max_page_size = 1000  # Optional: set the maximum page size
+
+    def get_paginated_response(self, data):
+        return Response({
+            'total_items': self.page.paginator.count,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'num_pages': self.page.paginator.num_pages,
+            'current_page': self.page.number,
+            'results': data,
+        })
+
+class AdminListRestaurantOrdersView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    pagination_class = OrderPagination  # Use the custom pagination class
+    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
+
+    def get_queryset(self):
+        admin = self.request.user.admin_profile
+        restaurant = admin.restaurant
+        order_status = self.request.query_params.get('order_status')  # Get the order_status filter from query params
+
+        queryset = Order.objects.filter(restaurant=restaurant)
+
+        if order_status:
+            queryset = queryset.filter(order_status=order_status)
+        
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)  # Paginate the queryset
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+    
+
+
+
+
+
+class ListCustomerOrdersAPIView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Retrieve orders associated with the current authenticated user (assuming customer is the user)
+        return Order.objects.filter(customer=self.request.user.customer_profile)
+    
+
+
+def refund_payment(payment_intent_id, amount):
+    try:
+        refund = stripe.Refund.create(
+            payment_intent=payment_intent_id,
+            # amount=amount,  # Specify the amount to refund
+        )
+        return refund
+    except stripe.error.StripeError as e:
+        return str(e)
+    
+
+class ChangeOrderStatusView(APIView):
+    def post(self, request, *args, **kwargs):
+        order_id = kwargs.get('order_id')
+        new_status = request.data.get('new_status')
+        
+
+        if not order_id:
+            return JsonResponse({'error': 'Order ID not provided'}, status=400)
+        
+        try:
+            order = Order.objects.get(id=order_id)
+            customer = order.customer
+            customer_email = customer.email
+        except Order.DoesNotExist:
+            return JsonResponse({'error': 'Order not found'}, status=404)
+        
+        # Check if the new status is valid
+        valid_statuses = ['confirmed', 'in_progress', 'on_the_way', 'delivered', 'canceled']
+        if new_status not in valid_statuses:
+            return JsonResponse({'error': 'Invalid status provided'}, status=400)
+        
+        # Check if the order status allows changing to 'canceled'
+        if new_status == 'canceled' and order.order_status != 'confirmed':
+            return JsonResponse({'error': 'Order status must be confirmed to cancel the order'}, status=400)
+        
+        # Update order status
+        order.order_status = new_status
+        order.save()
+
+        
+        # Refund payment if order is canceled
+        if new_status == 'canceled' and order.payment_intent_id:
+            refund_result = refund_payment(order.payment_intent_id, int(order.total_price))
+            print(refund_result)
+            if refund_result is not None:
+                send_order_status_changed_email(customer_email, order_id, new_status)
+                return JsonResponse({'message': f'Order canceled and payment refunded successfully'}, status=200)
+            else:
+                return JsonResponse({'error': 'Failed to refund payment'}, status=500)
+
+        send_order_status_changed_email(customer_email, order_id, new_status)
+        return JsonResponse({'message': f'Order status updated to {new_status}'}, status=200)

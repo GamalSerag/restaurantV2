@@ -309,7 +309,7 @@ class CartItemDeleteView(generics.DestroyAPIView):
 
         # Subtract the total cart item price from the cart
         cart = instance.cart
-        cart.total_price -= instance.price * instance.quantity
+        cart.total_price -= instance.total_price_after_discount * instance.quantity
         cart.save()
 
         self.perform_destroy(instance)

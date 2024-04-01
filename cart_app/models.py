@@ -2,6 +2,7 @@ from django.db import models
 from customer_app.models import Customer
 from restaurant_app.models import Category, Restaurant, MenuItem
 from django.contrib import admin
+from django.db.models import Sum
 
 
 
@@ -22,6 +23,12 @@ class Cart(models.Model):
     order_mode = models.CharField(max_length=20, choices=order_mode_choices, default='delivery')
     delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
+
+    # def calculate_total_price(self):
+    #     total_price = CartItem.objects.filter(cart=self).aggregate(total=Sum('total_price_after_discount'))['total']
+    #     return total_price
+    
+
     def save(self, *args, **kwargs):
         # If the cart is being created for the first time
         if not self.pk:
@@ -30,7 +37,7 @@ class Cart(models.Model):
                 self.delivery_fee = self.restaurant.delivery_fee
             else:
                 self.delivery_fee = 0  # Set delivery fee to 0 for other order modes or when restaurant is not set
-        
+        # self.total_price = self.calculate_total_price()
         super().save(*args, **kwargs)
 
 

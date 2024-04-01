@@ -48,7 +48,6 @@ INSTALLED_APPS = [
 
     'multiselectfield',
     'drf_spectacular',
-    'djstripe',
     'corsheaders',
 
     #######
@@ -209,7 +208,7 @@ STRIPE_TEST_SECRET_KEY = 'sk_test_51Og4O2BNQnmEJIQAohwj56aaIA9nPovsbDq0BzDAHNHwz
 # STRIPE_LIVE_PUBLIC_KEY = 'your_live_public_key'
 # STRIPE_LIVE_SECRET_KEY = 'your_live_secret_key'
 
-DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
+# DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
 
 CSRF_TRUSTED_ORIGINS = ["http://192.168.1.37:8200", "http://localhost:8000", "http://localhost:8200"]
 

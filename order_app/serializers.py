@@ -1,9 +1,15 @@
 from rest_framework import serializers
+
+from restaurant_app.models import Restaurant
 from .models import DeliveryDetails, Order, OrderInvoice
 from drf_writable_nested import WritableNestedModelSerializer
 from django.utils.translation import gettext_lazy as _
 
 
+class RestaurantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Restaurant
+        fields = ( 'name', 'logo')
 
 
 class DeliveryDetailsSerializer(serializers.ModelSerializer):
@@ -17,6 +23,7 @@ class DeliveryDetailsSerializer(serializers.ModelSerializer):
         
 class OrderSerializer(WritableNestedModelSerializer):
     delivery_details = DeliveryDetailsSerializer()
+    restaurant = RestaurantSerializer(required=False)
     class Meta:
         model = Order
         fields = '__all__'
