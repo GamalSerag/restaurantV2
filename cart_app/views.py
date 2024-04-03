@@ -13,7 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from restaurant_app.models import MenuItem, Restaurant, SizeAndPrice, MenuItemTypeItem, MenuItemExtraItem
 from .models import Cart, CartItem
-from .serializers import CartItemSerializer, CartSerializer, CartItemSerializerNoimage, GetCartItemSerializer
+from .serializers import  CartSerializer, CartItemSerializerNoimage, GetCartItemSerializer
 
 class CartItemCreateView(APIView):
     permission_classes = [IsAuthenticated, IsCustomer]
@@ -66,9 +66,14 @@ class CartItemCreateView(APIView):
         quantity = int(request.data.get('quantity', 1))
         special_instructions = request.data.get('special_instructions') 
         cart_id = request.data.get('cart_id') 
-        if cart_id:
-            order_mode = Cart.objects.get(pk=cart_id).order_mode
-        else: return Response({"error": "Cart with this id doesnot exist"}, status=status.HTTP_400_BAD_REQUEST)
+        if not cart_id:
+            return Response({"error": "Cart ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Retrieve the cart instance
+            cart = Cart.objects.get(pk=cart_id)
+        except Cart.DoesNotExist:
+            return Response({"error": "Cart with this ID does not exist"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if the menu item belongs to the requested restaurant
         menu_item = MenuItem.objects.filter(pk=menu_item_id, restaurant_id=restaurant_id).first()
@@ -111,25 +116,8 @@ class CartItemCreateView(APIView):
         if existing_cart_item:
             # If cart item exists, increase its quantity
             existing_cart_item.quantity += quantity
-            existing_cart_item.save()
+            existing_cart_item.save(update_fields=['quantity'])
             print(f"<<<<<>><><><><>quantity : {existing_cart_item.quantity}")
-            # Calculate the total price difference for the increased quantity
-            price_diff_before_discount = existing_cart_item.price * quantity
-            price_diff_after_discount = existing_cart_item.price_after_discount * quantity
-
-
-            # Update cart total price
-            print(f"<<<<<>><><><><>cart.total_price before : {existing_cart_item.cart.total_price}")
-            existing_cart_item.cart.total_price += price_diff_after_discount
-            existing_cart_item.cart.save()
-
-            
-            # Update the cart item's total price
-            existing_cart_item.total_price_after_discount += price_diff_after_discount
-            existing_cart_item.total_price_before_discount += price_diff_before_discount
-            existing_cart_item.save()
-            print(f"<<<<<>><><><><>cart.total_price after : {existing_cart_item.cart.total_price}")
-            # Serialize existing cart item data
             serializer = CartItemSerializerNoimage(existing_cart_item)
         else:
 
@@ -147,18 +135,11 @@ class CartItemCreateView(APIView):
                     total_price_after_discount=total_price_after_discount,
                     selected_extra_ids=selected_extra_ids,
                     selected_type_ids=selected_type_ids
-                    # Add other fields as needed
                 )
-                # cart_item.cart.total_price += total_price_after_discount
-                # Serialize cart item data
+
                 serializer = CartItemSerializerNoimage(cart_item)
             
-                # Update cart total price
-                cart = Cart.objects.get(pk=request.data.get('cart_id'))
-                cart.total_price += total_price_after_discount
-                if cart.order_mode == 'delivery' and not cart.items.exists():
-                    cart.total_price += cart.delivery_fee
-                cart.save()
+                
             except ObjectDoesNotExist as e:
                 # Handle the case where either the cart item or the menu item does not exist
                 if isinstance(e, CartItem.DoesNotExist):
@@ -187,27 +168,10 @@ class CartItemUpdateView(generics.UpdateAPIView):
         
         if new_quantity is not None:
             # Calculate the difference between the new and old quantities
-            quantity_diff = int(new_quantity) - instance.quantity
 
-            if quantity_diff > 0:
-                print(f'<<<<<<<<<<   quantity_diff = + {quantity_diff}   >>>>>>>>')
-                # Increase quantity: Update the total cart price by adding the price difference
-                instance.cart.total_price += instance.price_after_discount * quantity_diff
-            elif quantity_diff < 0:
-                # Decrease quantity: Update the total cart price by subtracting the price difference
-                instance.cart.total_price -= instance.price_after_discount * abs(quantity_diff)
-                print(f'<<<<<<<<<<   quantity_diff :  -{abs(quantity_diff)}  >>>>>>>>')
-
-
-            
-            # Save the updated cart total price
-            instance.cart.save()
-
-            # Update the quantity of the cart item
             instance.quantity = new_quantity
-            instance.save()
-
-        # Update the cart item instance with the new data
+            instance.save(update_fields=['quantity'])
+            
         self.perform_update(serializer)
 
         return Response(serializer.data)
@@ -259,42 +223,42 @@ class CartUpdateView(generics.UpdateAPIView):
 
 
 class CartDetailsView(APIView):
-    permission_classes = [IsCustomer]
+
+    permission_classes = [IsAuthenticated, IsCustomer]
     
     def get(self, request):
         if request.user.role != 'customer':
             return Response({'error': 'Only customers can access cart details.'}, status=status.HTTP_403_FORBIDDEN)
+        
         # Get the authenticated user's customer profile
         customer = request.user.customer_profile
 
         # Get the restaurant ID from the request data
         restaurant_id = request.query_params.get('restaurant_id')
+        if not restaurant_id:
+            return Response({'error': 'Restaurant ID is required in the request data.'}, status=status.HTTP_400_BAD_REQUEST)
         
         restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
 
         order_mode = request.query_params.get('order_mode')
 
-        # Ensure that the restaurant ID is provided in the request data
-        if not restaurant_id:
-            return Response({'error': 'Restaurant ID is required in the request data.'}, status=status.HTTP_400_BAD_REQUEST)
-
         # Get or create the cart based on the customer and restaurant IDs
         cart, created = Cart.objects.get_or_create(customer=customer, restaurant_id=restaurant_id)
-        
 
+        # Check if the cart was just created
         if created:
             # Update the order mode if provided in the request
-            if order_mode:
-                if order_mode.lower() in ['delivery', 'pick_up', 'dine_in']:
-                    cart.order_mode = order_mode.lower()
-                    if cart.order_mode == 'delivery' :
-                        cart.total_price +=  restaurant.delivery_fee
-                    cart.save()
-                else:
-                    cart.delete()
-                    return Response({"error": "Invalid order mode. Choose from 'delivery', 'pickup', or 'dine_in'."}, status=status.HTTP_400_BAD_REQUEST)
+            if order_mode and order_mode.lower() in ['delivery', 'pick_up', 'dine_in']:
+                cart.order_mode = order_mode.lower()
+                if cart.order_mode == 'delivery':
+                    cart.total_price += restaurant.delivery_fee
+                cart.save()
+            else:
+                cart.delete()
+                return Response({"error": "Invalid order mode. Choose from 'delivery', 'pickup', or 'dine_in'."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Serialize the cart and return the response
+        # Now that the cart is fully created and saved, you can access related items
+        # For example, you might want to serialize the cart with its related items
         serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data)
 
@@ -306,11 +270,6 @@ class CartItemDeleteView(generics.DestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-
-        # Subtract the total cart item price from the cart
-        cart = instance.cart
-        cart.total_price -= instance.total_price_after_discount * instance.quantity
-        cart.save()
-
         self.perform_destroy(instance)
+        
         return Response(status=status.HTTP_204_NO_CONTENT)

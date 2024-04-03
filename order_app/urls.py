@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import AdminListRestaurantOrdersView, ChangeOrderStatusView, CheckCartOrderView, GetOrderByClientSecretView, ListCustomerOrdersAPIView, OrderDetailView, OrderListCreateView, OrderPatchUpdateView, PaymentIntentCreateView, download_pdf, stripe_webhook
+from .views import AdminListRestaurantOrdersView, ChangeOrderStatusView, CheckCartOrderView, GetOrderByClientSecretView, ListCustomerOrdersAPIView, OrderDetailView, OrderListCreateView, OrderPatchUpdateView, PaymentIntentCreateView, SSEView, download_pdf, stripe_webhook
 from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
@@ -20,4 +20,5 @@ urlpatterns = [
     path('check-cart-order/', CheckCartOrderView.as_view(), name='check-cart-order'),
     path('update/<int:pk>/', OrderPatchUpdateView.as_view(), name='order-update'),
     path('change-order-status/<int:order_id>/', csrf_exempt(ChangeOrderStatusView.as_view()), name='change-order-status'),
+    path('sse/', SSEView.as_view(), name='sse'),
 ]

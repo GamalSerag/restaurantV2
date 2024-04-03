@@ -101,6 +101,9 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.pk} - {self.customer.first_name} {self.customer.last_name}"
+    
+    class Meta:
+        ordering = ['-created_at']
 
 
 

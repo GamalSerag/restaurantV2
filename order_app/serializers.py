@@ -18,6 +18,15 @@ class DeliveryDetailsSerializer(serializers.ModelSerializer):
         fields = '__all__'
         extra_kwargs = {
             'order': {'required': False},
+            'post_code': {'required': False},
+            'city': {'required': False},
+            'area': {'required': False},
+            'lane': {'required': False},
+            'street_name': {'required': False},
+            'house_number': {'required': False},
+            'floor': {'required': False},
+            'company_name': {'required': False},
+
         }
 
         
@@ -29,6 +38,7 @@ class OrderSerializer(WritableNestedModelSerializer):
         fields = '__all__'
         extra_kwargs = {
             'customer': {'required': False},
+
         }
 
 

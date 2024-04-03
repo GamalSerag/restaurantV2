@@ -1,14 +1,17 @@
 from datetime import timezone
+import json
+import time
 from django.conf import settings
 from rest_framework import generics, views
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views import View
 import stripe
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
+from auth_app.models import User
 from order_app.serializers import DeliveryDetailsSerializer, OrderInvoiceSerializer, OrderSerializer
 from order_app.utils import send_order_placed_email, send_order_status_changed_email
 from .models import DeliveryDetails, Order, OrderInvoice
@@ -17,6 +20,7 @@ from django.http import FileResponse
 from  rest_framework.permissions import IsAuthenticated
 from auth_app.permissions import IsAdminOfRestaurant, IsCustomer
 from rest_framework.pagination import PageNumberPagination
+from django.db.models.signals import post_save
 # from django_cron import CronJobBase, Schedule
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY 
@@ -242,11 +246,15 @@ class AdminListRestaurantOrdersView(generics.ListAPIView):
         admin = self.request.user.admin_profile
         restaurant = admin.restaurant
         order_status = self.request.query_params.get('order_status')  # Get the order_status filter from query params
+        order_mode = self.request.query_params.get('order_mode')
 
         queryset = Order.objects.filter(restaurant=restaurant)
 
         if order_status:
             queryset = queryset.filter(order_status=order_status)
+        
+        if order_mode:
+            queryset = queryset.filter(order_mode=order_mode)
         
         return queryset
 
@@ -283,10 +291,20 @@ def refund_payment(payment_intent_id, amount):
     
 
 class ChangeOrderStatusView(APIView):
+    def refund_and_send_email(self, order, new_status, customer_email):
+        if order.payment_intent_id:
+            refund_result = refund_payment(order.payment_intent_id, int(order.total_price))
+            if refund_result:
+                send_order_status_changed_email(customer_email, order.id, new_status)
+                return JsonResponse({'message': f'Order canceled and payment refunded successfully'}, status=200)
+            else:
+                return JsonResponse({'error': 'Failed to refund payment'}, status=500)
+        else:
+            return JsonResponse({'error': 'No payment intent ID found'}, status=400)
+
     def post(self, request, *args, **kwargs):
         order_id = kwargs.get('order_id')
         new_status = request.data.get('new_status')
-        
 
         if not order_id:
             return JsonResponse({'error': 'Order ID not provided'}, status=400)
@@ -295,32 +313,110 @@ class ChangeOrderStatusView(APIView):
             order = Order.objects.get(id=order_id)
             customer = order.customer
             customer_email = customer.email
+            order_mode = order.order_mode
         except Order.DoesNotExist:
             return JsonResponse({'error': 'Order not found'}, status=404)
         
-        # Check if the new status is valid
-        valid_statuses = ['confirmed', 'in_progress', 'on_the_way', 'delivered', 'canceled']
-        if new_status not in valid_statuses:
-            return JsonResponse({'error': 'Invalid status provided'}, status=400)
-        
-        # Check if the order status allows changing to 'canceled'
-        if new_status == 'canceled' and order.order_status != 'confirmed':
-            return JsonResponse({'error': 'Order status must be confirmed to cancel the order'}, status=400)
-        
-        # Update order status
-        order.order_status = new_status
-        order.save()
+        if order_mode == 'delivery':
+            # Check if the new status is valid
+            valid_statuses = ['confirmed', 'in_progress', 'on_the_way', 'delivered', 'canceled']
+            if new_status not in valid_statuses:
+                return JsonResponse({'error': 'Invalid status provided'}, status=400)
+            
+            # Check if the order status allows changing to 'canceled'
+            if new_status == 'canceled':
+                order.order_status = new_status
+                order.save()
+                return self.refund_and_send_email(order, new_status, customer_email)
 
-        
-        # Refund payment if order is canceled
-        if new_status == 'canceled' and order.payment_intent_id:
-            refund_result = refund_payment(order.payment_intent_id, int(order.total_price))
-            print(refund_result)
-            if refund_result is not None:
-                send_order_status_changed_email(customer_email, order_id, new_status)
-                return JsonResponse({'message': f'Order canceled and payment refunded successfully'}, status=200)
-            else:
-                return JsonResponse({'error': 'Failed to refund payment'}, status=500)
+            # Update order status for other statuses
+            order.order_status = new_status
+            order.save()
 
+        elif order_mode == 'pick_up':
+            # Check if the new status is valid
+            valid_statuses = ['confirmed', 'in_progress', 'canceled']
+            if new_status not in valid_statuses:
+                return JsonResponse({'error': 'Invalid status provided'}, status=400)
+            
+            # Check if the order status allows changing to 'canceled'
+            if new_status == 'canceled':
+                order.order_status = new_status
+                order.save()
+                return self.refund_and_send_email(order, new_status, customer_email)
+
+            # Update order status for other statuses
+            order.order_status = new_status
+            order.save()
+
+        # Send email for status change if not canceled
         send_order_status_changed_email(customer_email, order_id, new_status)
         return JsonResponse({'message': f'Order status updated to {new_status}'}, status=200)
+
+
+# class SSEOrdersUpdateView(View):
+#     def get(self, request, *args, **kwargs):
+#         response = HttpResponse(content_type='text/event-stream')
+#         response['Cache-Control'] = 'no-cache'
+#         response['Connection'] = 'keep-alive'
+
+#         def event_stream():
+#             while True:
+#                 # Check for new orders (this is just an example, replace with actual logic)
+#                 new_orders = check_for_new_orders()
+
+#                 if new_orders:
+#                     # Send SSE event for each new order
+#                     for order in new_orders:
+#                         yield f"data: {order}\n\n"
+#                 else:
+#                     # Send a keep-alive message to prevent connection timeout
+#                     yield ":\n\n"
+
+#                 # Sleep for a while before checking again
+#                 time.sleep(5)
+
+#         return HttpResponse(event_stream(), content_type='text/event-stream')
+    
+
+from django.http import HttpResponseBadRequest
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.contrib.auth import authenticate
+from django.conf import settings
+from django.utils.functional import SimpleLazyObject
+import json
+class SSEView(View):
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(ensure_csrf_cookie)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        # Extract token from query parameters
+        user_token = request.GET.get('token')
+        
+        # Authenticate the user based on the token
+        user = User.objects.filter(auth_token=user_token).first()
+        print (user.username)
+        if not user:
+            return HttpResponse(status=401)
+
+        # Your SSE logic here
+        response = HttpResponse(content_type='text/event-stream')
+        response['Cache-Control'] = 'no-cache'
+        # response['Connection'] = 'keep-alive'
+
+        def send_event(event_data):
+            response.write(f"data: {json.dumps(event_data)}\n\n")
+
+        def new_order_created(sender, instance, created, **kwargs):
+            if created and instance.restaurant == user.admin_profile.restaurant:
+                send_event({'message': 'New order created'})
+
+        # Connect the signal to the function
+        post_save.connect(new_order_created, sender=Order)
+
+        return response

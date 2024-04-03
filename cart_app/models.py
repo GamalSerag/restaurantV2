@@ -1,8 +1,14 @@
+from django.http import Http404
+from django.utils import timezone
+from decimal import Decimal
 from django.db import models
+from cart_app.utils import calculate_cart_item_total_prices
 from customer_app.models import Customer
-from restaurant_app.models import Category, Restaurant, MenuItem
+from restaurant_app.models import Category, MenuItemExtraItem, MenuItemTypeItem, Restaurant, MenuItem
 from django.contrib import admin
 from django.db.models import Sum
+from django.core.exceptions import ObjectDoesNotExist
+
 
 
 
@@ -24,9 +30,18 @@ class Cart(models.Model):
     delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
 
-    # def calculate_total_price(self):
-    #     total_price = CartItem.objects.filter(cart=self).aggregate(total=Sum('total_price_after_discount'))['total']
-    #     return total_price
+    def calculate_total_price(self):
+        # Check if the Cart instance has a primary key (i.e., if it's saved)
+        if self.pk:
+            total_price_after_discount = self.items.aggregate(total=Sum('total_price_after_discount'))['total']
+            if total_price_after_discount is None:
+                total_price_after_discount = 0
+            if self.order_mode == 'delivery' and self.restaurant:
+                total_price_after_discount += self.delivery_fee
+            return total_price_after_discount
+        else:
+            # Cart instance is not saved yet, return 0 or any default value
+            return 0
     
 
     def save(self, *args, **kwargs):
@@ -37,7 +52,7 @@ class Cart(models.Model):
                 self.delivery_fee = self.restaurant.delivery_fee
             else:
                 self.delivery_fee = 0  # Set delivery fee to 0 for other order modes or when restaurant is not set
-        # self.total_price = self.calculate_total_price()
+        self.total_price = self.calculate_total_price()
         super().save(*args, **kwargs)
 
 
@@ -65,6 +80,21 @@ class CartItem(models.Model):
     def __str__(self):
         return f"CartItem #{self.pk}"
     
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            base_price, total_price_with_quantity, total_price_without_quantity = calculate_cart_item_total_prices(
+                self.menu_item, self.selected_type_ids, self.selected_extra_ids, self.quantity
+            )
+
+            self.price = base_price
+            self.total_price_before_discount = total_price_with_quantity
+            self.total_price_after_discount = total_price_without_quantity
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"CartItem #{self.pk}"
+
 
 class CartItemInline(admin.TabularInline):
     model = CartItem
