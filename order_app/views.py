@@ -5,7 +5,7 @@ from django.conf import settings
 from rest_framework import generics, views
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views import View
 import stripe
 from rest_framework import serializers, status
@@ -21,12 +21,35 @@ from  rest_framework.permissions import IsAuthenticated
 from auth_app.permissions import IsAdminOfRestaurant, IsCustomer
 from rest_framework.pagination import PageNumberPagination
 from django.db.models.signals import post_save
+from rest_framework.exceptions import ValidationError
 # from django_cron import CronJobBase, Schedule
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY 
+import os
+
+
+@csrf_exempt  # Disable CSRF protection for this view (for simplicity, ensure proper security measures in production)
+def upload_file(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+        upload_folder = 'D:/django sharing'  # Specify the folder where files will be saved
+
+        # Ensure the upload folder exists
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+
+        # Save the uploaded file to the server
+        with open(os.path.join(upload_folder, uploaded_file.name), 'wb+') as destination:
+            for chunk in uploaded_file.chunks():
+                destination.write(chunk)
+
+        return JsonResponse({'message': 'File uploaded successfully.'})
+    else:
+        return JsonResponse({'error': 'Invalid request.'}, status=400)
+    
 
 def download_pdf(request):
-    pdf_path = 'D:/books/Two Scoops of Django 3.x_ Best Practices for the Django Web Framework by Daniel Feldroy.pdf'
+    pdf_path = 'D:/django sharing/erp_system-accountant.sql'
     response = FileResponse(open(pdf_path, 'rb'), as_attachment=True)
     return response
 
@@ -247,6 +270,7 @@ class AdminListRestaurantOrdersView(generics.ListAPIView):
         restaurant = admin.restaurant
         order_status = self.request.query_params.get('order_status')  # Get the order_status filter from query params
         order_mode = self.request.query_params.get('order_mode')
+        search_id = self.request.query_params.get('search_id')
 
         queryset = Order.objects.filter(restaurant=restaurant)
 
@@ -255,17 +279,43 @@ class AdminListRestaurantOrdersView(generics.ListAPIView):
         
         if order_mode:
             queryset = queryset.filter(order_mode=order_mode)
+
+        if search_id :
+            try:
+                search_id = int(search_id)
+            except ValueError:
+                raise ValidationError("BAD REQUEST: search_id must be an integer.") 
+            
+            queryset = queryset.filter(id=search_id)
         
+
         return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+        # if queryset
         page = self.paginate_queryset(queryset)  # Paginate the queryset
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
     
 
+class OrderStatusCountAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
 
+    def get(self, request, *args, **kwargs):
+        admin = request.user.admin_profile
+        restaurant = admin.restaurant
+
+        order_counts = {
+            'pending': Order.objects.filter(restaurant=restaurant, order_status='pending').count(),
+            'confirmed': Order.objects.filter(restaurant=restaurant, order_status='confirmed').count(),
+            'in_progress': Order.objects.filter(restaurant=restaurant, order_status='in_progress').count(),
+            'on_the_way': Order.objects.filter(restaurant=restaurant, order_status='on_the_way').count(),
+            'delivered': Order.objects.filter(restaurant=restaurant, order_status='delivered').count(),
+            'canceled': Order.objects.filter(restaurant=restaurant, order_status='canceled').count(),
+        }
+
+        return Response(order_counts)
 
 
 
@@ -335,7 +385,7 @@ class ChangeOrderStatusView(APIView):
 
         elif order_mode == 'pick_up':
             # Check if the new status is valid
-            valid_statuses = ['confirmed', 'in_progress', 'canceled']
+            valid_statuses = ['confirmed', 'in_progress', 'canceled', 'delivered']
             if new_status not in valid_statuses:
                 return JsonResponse({'error': 'Invalid status provided'}, status=400)
             
@@ -354,69 +404,50 @@ class ChangeOrderStatusView(APIView):
         return JsonResponse({'message': f'Order status updated to {new_status}'}, status=200)
 
 
-# class SSEOrdersUpdateView(View):
-#     def get(self, request, *args, **kwargs):
-#         response = HttpResponse(content_type='text/event-stream')
-#         response['Cache-Control'] = 'no-cache'
-#         response['Connection'] = 'keep-alive'
 
-#         def event_stream():
-#             while True:
-#                 # Check for new orders (this is just an example, replace with actual logic)
-#                 new_orders = check_for_new_orders()
 
-#                 if new_orders:
-#                     # Send SSE event for each new order
-#                     for order in new_orders:
-#                         yield f"data: {order}\n\n"
-#                 else:
-#                     # Send a keep-alive message to prevent connection timeout
-#                     yield ":\n\n"
 
-#                 # Sleep for a while before checking again
-#                 time.sleep(5)
 
-#         return HttpResponse(event_stream(), content_type='text/event-stream')
+# class SSEView(View):
+#     permission_classes = [IsAuthenticated]
+
+#     # @method_decorator(ensure_csrf_cookie)
+#     # def dispatch(self, request, *args, **kwargs):
+#     #     return super().dispatch(request, *args, **kwargs)
+
     
 
-from django.http import HttpResponseBadRequest
-from django.utils.decorators import method_decorator
-from django.views import View
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.contrib.auth import authenticate
-from django.conf import settings
-from django.utils.functional import SimpleLazyObject
-import json
-class SSEView(View):
-    permission_classes = [IsAuthenticated]
-
-    @method_decorator(ensure_csrf_cookie)
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
-        # Extract token from query parameters
-        user_token = request.GET.get('token')
+#     def get(self, request, *args, **kwargs):
+#         # Extract token from query parameters
+#         user_token = request.GET.get('user_token')
         
-        # Authenticate the user based on the token
-        user = User.objects.filter(auth_token=user_token).first()
-        print (user.username)
-        if not user:
-            return HttpResponse(status=401)
+#         # Authenticate the user based on the token
+#         user = User.objects.filter(auth_token=user_token).first()
+#         print (user)
+#         if not user:
+#             return HttpResponse(status=401)
 
-        # Your SSE logic here
-        response = HttpResponse(content_type='text/event-stream')
-        response['Cache-Control'] = 'no-cache'
-        # response['Connection'] = 'keep-alive'
+#         response = HttpResponse(content_type='text/event-stream')
+#         response['Cache-Control'] = 'no-cache'
+        
+#         response.write(f"data: {json.dumps({'message': 'New order created'})}\n\n")
+#         # response['Connection'] = 'keep-alive'  # Keep the connection alive
 
-        def send_event(event_data):
-            response.write(f"data: {json.dumps(event_data)}\n\n")
+#         def send_event(event_data):
+#             print('################################SEND EVENT CALLED################################################')
+            
+#             # message = event_data[message]
+#             print( event_data)
+#             response.write(f"data: {json.dumps(event_data)}\n\n")
+#             return response
+#             # response.flush()  # Flush the response to send immediately
 
-        def new_order_created(sender, instance, created, **kwargs):
-            if created and instance.restaurant == user.admin_profile.restaurant:
-                send_event({'message': 'New order created'})
 
-        # Connect the signal to the function
-        post_save.connect(new_order_created, sender=Order)
 
-        return response
+#         @receiver(post_save, sender=Order)
+#         def new_order_created(sender, instance, created, **kwargs):
+#             if created and instance.restaurant == user.admin_profile.restaurant:
+#                 print('@@@@@@@@@@@@@@@@@SIGNAL CALLED@@@@@@@@@@@@@@@@@@@')
+#                 send_event({'message': 'New order created'})
+        
+#         return response

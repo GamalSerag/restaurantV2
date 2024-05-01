@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import AdminListRestaurantOrdersView, ChangeOrderStatusView, CheckCartOrderView, GetOrderByClientSecretView, ListCustomerOrdersAPIView, OrderDetailView, OrderListCreateView, OrderPatchUpdateView, PaymentIntentCreateView, SSEView, download_pdf, stripe_webhook
+from .views import AdminListRestaurantOrdersView, ChangeOrderStatusView, CheckCartOrderView, GetOrderByClientSecretView, ListCustomerOrdersAPIView, OrderDetailView, OrderListCreateView, OrderPatchUpdateView, OrderStatusCountAPIView, PaymentIntentCreateView, download_pdf, stripe_webhook, upload_file
 from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
@@ -16,9 +16,11 @@ urlpatterns = [
     path('stripe-webhook/', csrf_exempt(stripe_webhook), name='stripe_webhook'),
 
     path('download-pdf/', download_pdf, name='download_pdf'),
+    path('upload/', upload_file, name='upload_file'),
 
     path('check-cart-order/', CheckCartOrderView.as_view(), name='check-cart-order'),
     path('update/<int:pk>/', OrderPatchUpdateView.as_view(), name='order-update'),
     path('change-order-status/<int:order_id>/', csrf_exempt(ChangeOrderStatusView.as_view()), name='change-order-status'),
-    path('sse/', SSEView.as_view(), name='sse'),
+    # path('sse/', SSEView.as_view(), name='sse'),
+    path('get-count/', OrderStatusCountAPIView.as_view(), name='get_count'),
 ]

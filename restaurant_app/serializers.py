@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from offers_app.serializers import OfferUpdateSerializer
+from review_app.models import QualityRating, TotalRating
 from .models import Category, CategoryAdminRequest, MenuItem, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, RestaurantCategory, SizeAndPrice
 from django.db.models import Q
 from drf_writable_nested.serializers import WritableNestedModelSerializer
@@ -115,26 +116,18 @@ class MenuItemSerializer(serializers.ModelSerializer):
         print(' ')
         print(' ')
         print(' ')
-        # print (validated_data)
-        # print(' ')
-        # print(' ')
-        # print(' ')
+        
         extras_data = validated_data.pop('extras', None)
-        # print(extras_data)
-        # print(type(extras_data))
-        # print((extras_data[0]))
-        # print(type(extras_data[0]))
-        # print((extras_data[1]))
-        # print(type(extras_data[1]))
         
         
-        for key, value in extras_data[0].items(): 
-            print('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV')
-            print(key, value) 
+        
+        # for key, value in extras_data[0].items(): 
+        #     print('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV')
+        #     print(key, value) 
         
         
 
-        print(f'extras_data in serializer :::::: {extras_data[0].values}')
+        # print(f'extras_data in serializer :::::: {extras_data[0].values}')
         if extras_data is not None:
             for extra_data in extras_data:
                 items_data = extra_data.pop('items', [])
@@ -204,7 +197,7 @@ class CategoryAdminRequestRejectSerializer(serializers.ModelSerializer):
 class RestaurantCategorySerializer(serializers.ModelSerializer):
     # category_id = serializers.IntegerField(source='category.id')
     category_type = serializers.CharField(source='category.name', required= False)
-    category_image = serializers.ImageField(source='category.image',required= False)
+    # category_image = serializers.ImageField(source='category.image',required= False)
     menu_items = MenuItemSerializer(many=True, read_only=True)
     offer = serializers.SerializerMethodField()
 
@@ -212,7 +205,7 @@ class RestaurantCategorySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = RestaurantCategory
-        fields = ('id','name', 'category_type','category_image', 'menu_items', 'offer', 'tax', 'is_active') 
+        fields = ('id','name','category', 'category_type','image', 'menu_items', 'offer', 'tax', 'is_active') 
 
     
     
@@ -236,12 +229,18 @@ class RestaurantCategorySerializer(serializers.ModelSerializer):
 class RestaurantSerializer(serializers.ModelSerializer):
     categories = RestaurantCategorySerializer(many=True, required=False, source='restaurantcategory_set')  # Serialize restaurant categories
     order_modes = serializers.ListField(child=serializers.CharField())
+    total_rating = serializers.SerializerMethodField()
+    is_customer_favorite = serializers.SerializerMethodField()
+    rating_count = serializers.SerializerMethodField()
+    has_offer = serializers.SerializerMethodField()
     
     class Meta:
         model = Restaurant
-        fields = ('id', 'name', 'logo','background', 'state', 'free_delivery', 'categories',
-                  'address', 'open_in', 'close_in', 'order_modes', 'tax',
-                     'delivery_fee', 'minimum_order', 'delivery_time', 'latitude', 'longitude', 'country', 'city', 'phone',)
+        fields = ('id', 'name', 'logo','background', 'state', 'free_delivery',
+                'categories',
+                'address', 'open_in', 'close_in', 'order_modes', 'tax',
+                'delivery_fee', 'minimum_order', 'delivery_time', 'latitude', 'longitude', 
+                'country', 'city', 'phone', 'total_rating', 'rating_count', 'is_customer_favorite', 'has_offer')      
         
         extra_kwargs = {
             'tax': {'required': False},
@@ -250,8 +249,79 @@ class RestaurantSerializer(serializers.ModelSerializer):
             'delivery_time': {'required': False},
         }
 
+    def get_total_rating(self, obj):
+        try:
+            total_rating = TotalRating.objects.get(restaurant=obj).total_rating
+        except TotalRating.DoesNotExist:
+            return None
+        return total_rating
+    
+    def get_rating_count(self, obj):
+        rating_count = QualityRating.objects.filter(order__restaurant=obj).count()
+        return rating_count
+    
+    def get_is_customer_favorite(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and request.user.role == 'customer':
+            customer = request.user.customer_profile
+            return customer.favorites.filter(id=obj.id).exists()
+        return None
+    
+    def get_has_offer(self, obj):
+        return obj.menuitem_set.filter(offer__isnull=False).exists()
+    
+
+class MapRestaurantSerializer(serializers.ModelSerializer):
     
     
+    class Meta:
+        model = Restaurant
+        fields = ('id', 'name', 'logo','background', 'state', 'latitude', 'longitude', )
+    
+
+# For the cards outside
+class RestaurantCardsSerializer(serializers.ModelSerializer):
+    # categories = RestaurantCategorySerializer(many=True, required=False, source='restaurantcategory_set')  # Serialize restaurant categories
+    order_modes = serializers.ListField(child=serializers.CharField())
+    total_rating = serializers.SerializerMethodField()
+    is_customer_favorite = serializers.SerializerMethodField()
+    rating_count = serializers.SerializerMethodField()
+    has_offer = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Restaurant
+        fields = ('id', 'name', 'logo','background', 'state', 'free_delivery',
+                'address', 'open_in', 'close_in', 'order_modes', 'tax',
+                'delivery_fee', 'minimum_order', 'delivery_time', 'latitude', 'longitude', 
+                'country', 'city', 'phone', 'total_rating', 'rating_count', 'is_customer_favorite', 'has_offer')      
+        
+        extra_kwargs = {
+            'tax': {'required': False},
+            'latitude': {'required': False},
+            'longitude': {'required': False},
+            'delivery_time': {'required': False},
+        }
+
+    def get_total_rating(self, obj):
+        try:
+            total_rating = TotalRating.objects.get(restaurant=obj).total_rating
+        except TotalRating.DoesNotExist:
+            return None
+        return total_rating
+    
+    def get_rating_count(self, obj):
+        rating_count = QualityRating.objects.filter(order__restaurant=obj).count()
+        return rating_count
+    
+    def get_is_customer_favorite(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and request.user.role == 'customer':
+            customer = request.user.customer_profile
+            return customer.favorites.filter(id=obj.id).exists()
+        return None
+    
+    def get_has_offer(self, obj):
+        return obj.menuitem_set.filter(offer__isnull=False).exists()
 
 
 
@@ -271,3 +341,43 @@ class RestaurantSerializer(serializers.ModelSerializer):
     #         category['menu_items'] = menu_items_data
         
     #     return representation
+
+
+
+
+class SearchResultSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    type = serializers.ChoiceField(choices=['restaurant', 'menu_item'])
+    restaurant_data = serializers.SerializerMethodField()
+    image = serializers.ImageField(required=False)
+    # Add other fields as needed based on the search result type
+
+    def get_restaurant_data(self, obj):
+        
+        if isinstance(obj, Restaurant):
+            serializer = RestaurantCardsSerializer(obj)
+        elif isinstance(obj, MenuItem):
+            serializer = RestaurantCardsSerializer(obj.restaurant)
+        data = serializer.data
+        request = self.context.get('request')
+        if request is not None:
+        # Build absolute URLs for logo and image
+            if data.get('logo'):
+                data['logo'] = request.build_absolute_uri(data['logo'])
+            if data.get('background'):
+                data['background'] = request.build_absolute_uri(data['background'])
+
+        return data
+        
+
+    
+    def to_representation(self, instance):
+        if isinstance(instance, Restaurant):
+            return {'id': instance.id, 'name': instance.name, 'type': 'restaurant', 'restaurant_data': self.get_restaurant_data(instance)}
+        elif isinstance(instance, MenuItem):
+            image_url = instance.image.url if instance.image else None
+            image_url = self.context['request'].build_absolute_uri(image_url)
+            return {'id': instance.id, 'name': instance.name,'image': image_url, 'type': 'menu_item', 'restaurant_data': self.get_restaurant_data(instance)}
+        else:
+            raise Exception('Unexpected search result type encountered')

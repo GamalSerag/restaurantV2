@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 class RestaurantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
-        fields = ( 'name', 'logo')
+        fields = ( 'id', 'name', 'logo', 'phone', 'address')
 
 
 class DeliveryDetailsSerializer(serializers.ModelSerializer):

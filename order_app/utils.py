@@ -1,5 +1,6 @@
 from django.core.mail import send_mail
 from django.conf import settings
+from rest_framework.authentication import TokenAuthentication
 
 def send_order_placed_email(customer_email, order_id):
     subject = 'Order Placed Successfully'
@@ -16,3 +17,4 @@ def send_order_status_changed_email(customer_email, order_id, new_status):
     recipient_list = [customer_email]
     
     send_mail(subject, message, from_email, recipient_list)
+

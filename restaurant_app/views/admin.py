@@ -1,6 +1,4 @@
 import json
-
-# from urllib import request
 from rest_framework.exceptions import ValidationError
 from django.http import QueryDict
 from django.shortcuts import get_object_or_404
@@ -11,8 +9,8 @@ from admin_app.models import Admin
 
 from location_app.models import City
 from offers_app.models import Offer
-from .models import Category, CategoryAdminRequest, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, MenuItem, RestaurantCategory, SizeAndPrice
-from .serializers import CategoryAdminRequestRejectSerializer, CategoryAdminRequestSerializer, CategorySerializer, MenuItemExtraItemSerializer, MenuItemExtraSerializer, MenuItemTypeItemSerializer, RestaurantCategorySerializer, RestaurantSerializer, MenuItemSerializer, SizeAndPriceSerializer
+from ..models import Category, CategoryAdminRequest, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, MenuItem, RestaurantCategory, SizeAndPrice
+from ..serializers import CategoryAdminRequestRejectSerializer, CategoryAdminRequestSerializer, CategorySerializer, MenuItemExtraItemSerializer, MenuItemExtraSerializer, MenuItemTypeItemSerializer, RestaurantCardsSerializer, RestaurantCategorySerializer, RestaurantSerializer, MenuItemSerializer, SearchResultSerializer, SizeAndPriceSerializer
 from urllib.parse import unquote
 from rest_framework.permissions import IsAuthenticated
 from auth_app.permissions import IsAdminOfRestaurant
@@ -22,27 +20,18 @@ from rest_framework.request import Request
 from rest_framework import serializers
 from django.db import transaction
 from django.db.models import Q
-
+from django.db.models import Count
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.html import strip_tags
-from .utils import category_request_email_approval
+from ..utils import category_request_email_approval
+from rest_framework.pagination import PageNumberPagination
+from django.db import IntegrityError
 
-
-
-
-
-
-
-class RestaurantListView(generics.ListAPIView):
-    queryset = Restaurant.objects.all()
-    serializer_class = RestaurantSerializer
-
-    def get_queryset(self):
-        # Filter restaurants based on the 'is_subscribed' field
-        return Restaurant.objects.filter(admin_profile__is_subscribed=True)
-    
-
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
 
 
 class AdminRestaurantDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -101,99 +90,114 @@ class AdminRestaurantDetailView(generics.RetrieveUpdateDestroyAPIView):
     
 
 
-class RestaurantDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Restaurant.objects.all()
-    serializer_class = RestaurantSerializer
-    def get(self, request, *args, **kwargs):
-        # Retrieve the Restaurant instance
-        restaurant_instance = self.get_object()
-
-
-        # Initialize the response data
-        response_data = super().get(request, *args, **kwargs).data
-
-        # Include size and price information for each menu item
-        for category_data in response_data['categories']:
-            for menu_item_data in category_data['menu_items']:
-                menu_item_instance = MenuItem.objects.get(id=menu_item_data['id'])
-                size_and_prices_data = SizeAndPrice.objects.filter(menu_item=menu_item_instance)
-                size_and_prices_serializer = SizeAndPriceSerializer(size_and_prices_data, many=True)
-                menu_item_data['sizes_and_prices'] = size_and_prices_serializer.data
-
-        return Response(response_data)
-
-
-class RestaurantListViewByCity(generics.ListAPIView):
-    
-    # serializer_class = RestaurantSerializer
-    serializer_class = RestaurantSerializer
-
-    def get_queryset(self):
-        city_name = self.kwargs['city_name']
-        city = get_object_or_404(City, name=city_name)
-
-        queryset = Restaurant.objects.filter(city=city)
-        
-
-        # Apply additional filters if provided in the query parameters
-        state = self.request.query_params.get('availability')
-        
-        free_delivery = self.request.query_params.get('free_delivery')
-        min_order = self.request.query_params.get('min_order')
-        categories_param = self.request.query_params.get('categories', '')
-        categories = [category.strip() for category in unquote(categories_param).split(',') if category.strip()]
-
-        if state:
-            state = state.capitalize()
-            queryset = queryset.filter(state=state)
-
-        if free_delivery:
-
-            queryset = queryset.filter(freeDelivery=free_delivery)
-
-        if min_order:
-            queryset = queryset.filter(minimum_order__lte=min_order)
-        
-        if categories:
-            # Use Q objects to filter based on RestaurantCategory's category
-            category_filters = Q(restaurantcategory__category__name__in=categories)
-            queryset = queryset.filter(category_filters).distinct()
-        return queryset
-    
-class MenuItemDetailView(generics.RetrieveUpdateDestroyAPIView):
+class MenuItemCreateView(generics.CreateAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
+    permission_classes = [IsAdminOfRestaurant]
+    print(f'permission_classes = {permission_classes}')
     
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        # offer_id = instance.offer
-        # offer = Offer.objects.get(id=offer_id)
+    def perform_create(self, serializer):
+        # Retrieve the admin associated with the authenticated user
+        admin = self.request.user.admin_profile
 
-        # Fetch related SizeAndPrice instances
-        sizes_and_prices = SizeAndPrice.objects.filter(menu_item=instance)
-        size_and_price_serializer = SizeAndPriceSerializer(sizes_and_prices, many=True)
+        # Retrieve the associated restaurant from the admin
+        restaurant = admin.restaurant
+        print(f"restaurant = {restaurant.name}")
+        # Extract the category ID from the request data
+        category_id = self.request.data.get('category')
+        print(f'category_id = {category_id}')
+        # Retrieve the restaurant category associated with the provided category ID and the restaurant
+        restaurant_category = RestaurantCategory.objects.filter(restaurant=restaurant, id=category_id).first()
+        print(f"restaurant_category = {restaurant_category}")
+        # Ensure that the restaurant category exists and is associated with the restaurant
+        if not restaurant_category:
+            raise serializers.ValidationError({'error': 'Invalid category ID'})
 
-        # Include sizes_and_prices in the response data
-        response_data = serializer.data
-        response_data['sizes_and_prices'] = size_and_price_serializer.data
-        # response_data['offer'] = offer
+        # Extract size and price data from request
+        sizes_and_prices_data = []
+        extras_data = []
+        types_data = []
 
-        return Response(response_data)
-    
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        print(f'Deleting instance: {instance}')
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    
-    
+        for key, value in self.request.data.items():
+            if key.startswith('sizes_and_prices'):
+                # Extract index from key
+                idx = int(key.split('[')[1].split(']')[0])
+
+                # Check if the key represents a size or price
+                if key.endswith('size]'):
+                    size = value
+                    price_key = f'sizes_and_prices[{idx}][price]'
+                    price = self.request.data.get(price_key)
+                    if price is not None:
+                        sizes_and_prices_data.append({'size': size, 'price': price})
+                    else:
+                        raise serializers.ValidationError({'error': f'Missing price for size {size}'})
+                
+                
+            elif key.startswith('extras'):
+                extra_idx = int(key.split('[')[1].split(']')[0])
+                if extra_idx >= len(extras_data):
+                    extras_data.append({'title': None, 'items': []})
+
+                if key.endswith('title]'):
+                    extras_data[extra_idx]['title'] = value
+                elif 'items' in key and key.endswith('price]'):
+                    item_idx = len(extras_data[extra_idx]['items'])
+                    name_key = f'extras[{extra_idx}][items][{item_idx}][name]'
+                    name = self.request.data.get(name_key)
+                    if name is None:
+                        raise serializers.ValidationError({'error': f'Missing name for item {item_idx}'})
+                    extras_data[extra_idx]['items'].append({'name': name, 'price': value})
+            
+            
+            elif key.startswith('types') :#and value != "null"
+                
+                type_idx = int(key.split('[')[1].split(']')[0])
+                if type_idx >= len(types_data):
+                    types_data.append({'title': None, 'items': []})
+
+                if key.endswith('title]'):
+                    types_data[type_idx]['title'] = value
+                elif 'items' in key and key.endswith('price]'):
+                    item_idx = len(types_data[type_idx]['items'])
+                    name_key = f'types[{type_idx}][items][{item_idx}][name]'
+                    name = self.request.data.get(name_key)
+                    if name is None:
+                        raise serializers.ValidationError({'error': f'Missing name for item {item_idx}'})
+                    types_data[type_idx]['items'].append({'name': name, 'price': value})
+            
+
+        print(f':::@@:::types_data: {types_data}')
+        # Save the MenuItem instance
+        menu_item = serializer.save(restaurant=restaurant, category=restaurant_category)
+
+        # Create SizeAndPrice instances for each pair of size and price
+        for size_price_data in sizes_and_prices_data:
+            SizeAndPrice.objects.create(menu_item=menu_item, **size_price_data)
+
+        # Create MenuItemExtra instances and their associated MenuItemExtraItem instances
+        for extra_data in extras_data:
+            items_data = extra_data.pop('items', [])
+            extra = MenuItemExtra.objects.create(**extra_data)
+            for item_data in items_data:
+                MenuItemExtraItem.objects.create(extra=extra, **item_data)
+            # Associate the created MenuItemExtra with the MenuItem
+            menu_item.extras.add(extra)
+
+        # Create MenuItemType instances and their associated MenuItemTypeItem instances
+        for type_data in types_data:
+            items_data = type_data.pop('items', [])
+            type = MenuItemType.objects.create(**type_data)
+            for item_data in items_data:
+                MenuItemTypeItem.objects.create(type=type, **item_data)
+            # Associate the created MenuItemType with the MenuItem
+            menu_item.types.add(type)
 
 
 class MenuItemCreateView(generics.CreateAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
-    permission_classes = [IsAdminOfRestaurant]
+    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
     print(f'permission_classes = {permission_classes}')
     
     def perform_create(self, serializer):
@@ -462,6 +466,33 @@ class MenuItemTypeItemDeleteView(generics.DestroyAPIView):
     serializer_class = MenuItemTypeItemSerializer
     # permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
 
+class MenuItemDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = MenuItem.objects.all()
+    serializer_class = MenuItemSerializer
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        # offer_id = instance.offer
+        # offer = Offer.objects.get(id=offer_id)
+
+        # Fetch related SizeAndPrice instances
+        sizes_and_prices = SizeAndPrice.objects.filter(menu_item=instance)
+        size_and_price_serializer = SizeAndPriceSerializer(sizes_and_prices, many=True)
+
+        # Include sizes_and_prices in the response data
+        response_data = serializer.data
+        response_data['sizes_and_prices'] = size_and_price_serializer.data
+        # response_data['offer'] = offer
+
+        return Response(response_data)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        print(f'Deleting instance: {instance}')
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
 
 class MenuItemUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = MenuItem.objects.all()
@@ -538,18 +569,6 @@ class MenuItemUpdateView(generics.RetrieveUpdateDestroyAPIView):
         self.perform_update(serializer)
         return Response(serializer.data)
     
-    
-
-
-
-class CategoriesView(generics.ListCreateAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-
-class CategoriesUpdateView(generics.UpdateAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-
 
 
 class CategoryAdminRequestView(generics.ListCreateAPIView):
@@ -564,110 +583,28 @@ class CategoryAdminRequestView(generics.ListCreateAPIView):
         serializer.save(requested_by=self.request.user.admin_profile)
 
 
-class CategoryApprovalView(generics.UpdateAPIView):
-    queryset = CategoryAdminRequest.objects.all()
-    serializer_class = CategoryAdminRequestSerializer
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        # Check if the request data includes new name or image
-        new_name = request.data.get('name', instance.name)
-        new_image = request.data.get('image', instance.image)
-
-        # Check if the request is already accepted
-        if instance.is_accepted:
-            return Response({"error": "This request has already been accepted."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Update the instance with the new data
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        # Check if the request is approved
-        if not instance.is_accepted:
-            # Create or update the global category based on the updated admin request
-            category_data = {
-                'name': new_name,
-                'image': new_image,
-            }
-            category_serializer = CategorySerializer(data=category_data)
-            if category_serializer.is_valid():
-                category_instance = category_serializer.save()
-                instance.is_accepted = True  # Update is_accepted to True
-                instance.save()
-                # Send approval email
-                category_request_email_approval(request, instance, is_approved=True)
-                return Response(category_serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(category_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"message": "Request updated successfully."}, status=status.HTTP_200_OK)
-
-
-    
-
-class CategoryAdminRequestRejectView(generics.UpdateAPIView):
-    queryset = CategoryAdminRequest.objects.filter(is_accepted=False, is_rejected=False)
-    serializer_class = CategoryAdminRequestRejectSerializer
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        # Check if the request includes superadmin_notes
-        superadmin_notes = request.data.get('superadmin_notes')
-
-        # Update the instance with the rejection status and notes
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(superadmin_notes=superadmin_notes)
-        category_request_email_approval(request, instance, is_approved=False)
-
-        return Response(serializer.data)
-
-
-
 class RestaurantCategoryListCreateView(generics.ListCreateAPIView):
     serializer_class = RestaurantCategorySerializer
     permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
 
-    def post(self, request, *args, **kwargs):
-        # Retrieve data from the request
-        category_id = request.data.get('category_id')
-        # if request.user != 'AnonymousUser':
-        admin = request.user.admin_profile
-        restaurant = admin.restaurant
-        name = request.data.get('name')
-        
-        restaurant_id = restaurant.id  # the restaurant associated with the authenticated user
-        
-        # Check if the selected category exists and is managed by the super admin
-        category = Category.objects.filter(id=category_id).first()
-        if not category:
-            return Response({'error': 'Invalid category ID'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check if the category is already added for the restaurant
-        existing_category = RestaurantCategory.objects.filter(restaurant=restaurant, category=category).exists()
-        if existing_category:
-            return Response({'error': 'Category already added for this restaurant'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create a new RestaurantCategory instance
-        restaurant_category = RestaurantCategory.objects.create(
-            restaurant_id=restaurant_id,
-            category=category,
-            name=name
-        )
-
-        # Serialize the created instance and return the response
-        serializer = self.get_serializer(restaurant_category)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-        
     def get_queryset(self):
         admin = self.request.user.admin_profile
         restaurant_id = admin.restaurant.id
         queryset = RestaurantCategory.objects.filter(restaurant_id=restaurant_id)
         return queryset
+
+    def perform_create(self, serializer):
+        admin = self.request.user.admin_profile
+        restaurant = admin.restaurant
+        serializer.save(restaurant=restaurant)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except IntegrityError:
+            # Handle uniqueness constraint violation
+            error_message = "This combination of restaurant and category already exists."
+            return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
 
 
     def list(self, request, *args, **kwargs):
@@ -677,7 +614,9 @@ class RestaurantCategoryListCreateView(generics.ListCreateAPIView):
 
 
 class RestaurantCategoryUpdateView(generics.UpdateAPIView):
+
     serializer_class = RestaurantCategorySerializer
+    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
     queryset = RestaurantCategory.objects.all()
 
     def get_queryset(self):
@@ -705,17 +644,5 @@ class RestaurantCategoryUpdateView(generics.UpdateAPIView):
 class RestaurantCategoryDeleteView(generics.DestroyAPIView):
     serializer_class = RestaurantCategorySerializer
     queryset = RestaurantCategory.objects.all()
-
-
-class CityCategoriesView(generics.ListAPIView):
-    serializer_class = CategorySerializer
-
-    def get_queryset(self):
-        city_name = self.kwargs.get('city_name')
-        # queryset = Category.objects.filter(restaurant__city__name=city_name).distinct()
-        queryset = Category.objects.all()
-        return queryset
-    
-
 
 
