@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
 from admin_app.models import Admin
+from auth_app.custom_adapter import CustomSocialAccountAdapter
 from customer_app.models import Customer
 from payment_app.serializers import SubscriptionSerializer
 from restaurant_app.models import Restaurant
@@ -15,7 +16,7 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
 from allauth.socialaccount.models import SocialToken
 
-from .serializers import GoogleSignupSerializer, UserSerializer
+from .serializers import CustomSocialLoginSerializer, GoogleSignupSerializer, UserSerializer
 from django.contrib.auth import authenticate, login, logout
 from rest_framework import status
 from rest_framework.response import Response
@@ -221,18 +222,55 @@ class GoogleAuthView(SocialLoginView):
     client_class = OAuth2Client
     callback_url = GOOGLE_REDIRECT_URL
     
+    # use custom serializer
+    # serializer_class = CustomSocialLoginSerializer
+    
+    # def post(self, request, *args, **kwargs):
+    #     # Capture the role from the request data and store it in the session
+    #     request.session['temp_role'] = request.data.get('role', 'customer')  # Set a default role as fallback
+    #     return super().post(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        print("Received authorization code:", request.data.get('code'))
+        user_role = request.data.get('role', 'customer')
         try:
             response = super().post(request, *args, **kwargs)
-            print("OAuth2 response:", response.data)
+            # Get the Google social account linked to the user
+            social_account = SocialAccount.objects.get(user=request.user)
+            
+            User.objects.filter(email=request.user.email).update(role=user_role)
+            print("Serializer name:", self.serializer_class.__name__)
+            if user_role == 'customer':
+                customer_profile, created = Customer.objects.get_or_create(user=request.user )
+                customer_profile.email = request.user.email
+                customer_profile.first_name = request.user.first_name
+                customer_profile.last_name = request.user.last_name
+                customer_profile.save()
+            elif user_role == 'restaurant_owner':
+                admin_profile, created = Admin.objects.get_or_create(user=request.user )
+                admin_profile.email = request.user.email
+                admin_profile.first_name = request.user.first_name
+                admin_profile.last_name = request.user.last_name
+                admin_profile.save()
+
             return response
         except OAuth2Error as e:
-            print("OAuth2 Error:", str(e))
             return Response({'error': str(e)}, status=500)
-        
 
+
+
+# class GoogleAuthView(SocialLoginView):
+#     adapter_class = GoogleOAuth2Adapter
+#     client_class = OAuth2Client
+#     callback_url = GOOGLE_REDIRECT_URL
+    
+#     serializer_class = CustomSocialLoginSerializer
+
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             response = super().post(request, *args, **kwargs)
+#             return response
+#         except OAuth2Error as e:
+#             return Response({'error': str(e)}, status=500)
 # class GoogleRefreshTokenView(APIView):
 #     def post(self, request):
 #         refresh = request.data.get('refresh')

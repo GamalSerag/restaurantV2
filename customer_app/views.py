@@ -2,6 +2,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 
+from auth_app.permissions import IsCustomer
 from restaurant_app.models import Restaurant
 from .models import Customer
 from .serializers import CustomerSerializer, FavoriteRestaurantSerializer
@@ -10,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 class CustomerViewSet(generics.ListAPIView):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCustomer]
 
     def get_queryset(self):
         user = self.request.user
@@ -22,7 +23,7 @@ class CustomerViewSet(generics.ListAPIView):
 
 
 class AddFavoriteRestaurantView(generics.UpdateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCustomer]
     serializer_class = CustomerSerializer
     
     def patch(self, request, *args, **kwargs):
@@ -51,7 +52,7 @@ class AddFavoriteRestaurantView(generics.UpdateAPIView):
     
 
 class FavoriteRestaurantListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCustomer]
     serializer_class = FavoriteRestaurantSerializer
 
     def get_queryset(self):

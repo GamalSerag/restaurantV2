@@ -197,123 +197,123 @@ class MenuItemCreateView(generics.CreateAPIView):
 class MenuItemCreateView(generics.CreateAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
-    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
-    print(f'permission_classes = {permission_classes}')
+    # permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
+    # print(f'permission_classes = {permission_classes}')
     
-    def perform_create(self, serializer):
-        # Retrieve the admin associated with the authenticated user
-        admin = self.request.user.admin_profile
+    # def perform_create(self, serializer):
+    #     # Retrieve the admin associated with the authenticated user
+    #     admin = self.request.user.admin_profile
 
-        # Retrieve the associated restaurant from the admin
-        restaurant = admin.restaurant
-        print(f"restaurant = {restaurant.name}")
-        # Extract the category ID from the request data
-        category_id = self.request.data.get('category')
-        print(f'category_id = {category_id}')
-        # Retrieve the restaurant category associated with the provided category ID and the restaurant
-        restaurant_category = RestaurantCategory.objects.filter(restaurant=restaurant, id=category_id).first()
-        print(f"restaurant_category = {restaurant_category}")
-        # Ensure that the restaurant category exists and is associated with the restaurant
-        if not restaurant_category:
-            raise serializers.ValidationError({'error': 'Invalid category ID'})
+    #     # Retrieve the associated restaurant from the admin
+    #     restaurant = admin.restaurant
+    #     print(f"restaurant = {restaurant.name}")
+    #     # Extract the category ID from the request data
+    #     category_id = self.request.data.get('category')
+    #     print(f'category_id = {category_id}')
+    #     # Retrieve the restaurant category associated with the provided category ID and the restaurant
+    #     restaurant_category = RestaurantCategory.objects.filter(restaurant=restaurant, id=category_id).first()
+    #     print(f"restaurant_category = {restaurant_category}")
+    #     # Ensure that the restaurant category exists and is associated with the restaurant
+    #     if not restaurant_category:
+    #         raise serializers.ValidationError({'error': 'Invalid category ID'})
 
-        # Extract size and price data from request
-        sizes_and_prices_data = []
-        extras_data = []
-        types_data = []
+    #     # Extract size and price data from request
+    #     sizes_and_prices_data = []
+    #     extras_data = []
+    #     types_data = []
 
-        for key, value in self.request.data.items():
-            if key.startswith('sizes_and_prices'):
-                # Extract index from key
-                idx = int(key.split('[')[1].split(']')[0])
+    #     for key, value in self.request.data.items():
+    #         if key.startswith('sizes_and_prices'):
+    #             # Extract index from key
+    #             idx = int(key.split('[')[1].split(']')[0])
 
-                # Check if the key represents a size or price
-                if key.endswith('size]'):
-                    size = value
-                    price_key = f'sizes_and_prices[{idx}][price]'
-                    price = self.request.data.get(price_key)
-                    if price is not None:
-                        sizes_and_prices_data.append({'size': size, 'price': price})
-                    else:
-                        raise serializers.ValidationError({'error': f'Missing price for size {size}'})
+    #             # Check if the key represents a size or price
+    #             if key.endswith('size]'):
+    #                 size = value
+    #                 price_key = f'sizes_and_prices[{idx}][price]'
+    #                 price = self.request.data.get(price_key)
+    #                 if price is not None:
+    #                     sizes_and_prices_data.append({'size': size, 'price': price})
+    #                 else:
+    #                     raise serializers.ValidationError({'error': f'Missing price for size {size}'})
                 
                 
-            elif key.startswith('extras'):
-                extra_idx = int(key.split('[')[1].split(']')[0])
-                if extra_idx >= len(extras_data):
-                    extras_data.append({'title': None, 'items': []})
+    #         elif key.startswith('extras'):
+    #             extra_idx = int(key.split('[')[1].split(']')[0])
+    #             if extra_idx >= len(extras_data):
+    #                 extras_data.append({'title': None, 'items': []})
 
-                if key.endswith('title]'):
-                    extras_data[extra_idx]['title'] = value
-                elif 'items' in key and key.endswith('price]'):
-                    item_idx = len(extras_data[extra_idx]['items'])
-                    name_key = f'extras[{extra_idx}][items][{item_idx}][name]'
-                    name = self.request.data.get(name_key)
-                    if name is None:
-                        raise serializers.ValidationError({'error': f'Missing name for item {item_idx}'})
-                    extras_data[extra_idx]['items'].append({'name': name, 'price': value})
+    #             if key.endswith('title]'):
+    #                 extras_data[extra_idx]['title'] = value
+    #             elif 'items' in key and key.endswith('price]'):
+    #                 item_idx = len(extras_data[extra_idx]['items'])
+    #                 name_key = f'extras[{extra_idx}][items][{item_idx}][name]'
+    #                 name = self.request.data.get(name_key)
+    #                 if name is None:
+    #                     raise serializers.ValidationError({'error': f'Missing name for item {item_idx}'})
+    #                 extras_data[extra_idx]['items'].append({'name': name, 'price': value})
             
             
-            elif key.startswith('types') :#and value != "null"
+    #         elif key.startswith('types') :#and value != "null"
                 
-                type_idx = int(key.split('[')[1].split(']')[0])
-                if type_idx >= len(types_data):
-                    types_data.append({'title': None, 'items': []})
+    #             type_idx = int(key.split('[')[1].split(']')[0])
+    #             if type_idx >= len(types_data):
+    #                 types_data.append({'title': None, 'items': []})
 
-                if key.endswith('title]'):
-                    types_data[type_idx]['title'] = value
-                elif 'items' in key and key.endswith('price]'):
-                    item_idx = len(types_data[type_idx]['items'])
-                    name_key = f'types[{type_idx}][items][{item_idx}][name]'
-                    name = self.request.data.get(name_key)
-                    if name is None:
-                        raise serializers.ValidationError({'error': f'Missing name for item {item_idx}'})
-                    types_data[type_idx]['items'].append({'name': name, 'price': value})
+    #             if key.endswith('title]'):
+    #                 types_data[type_idx]['title'] = value
+    #             elif 'items' in key and key.endswith('price]'):
+    #                 item_idx = len(types_data[type_idx]['items'])
+    #                 name_key = f'types[{type_idx}][items][{item_idx}][name]'
+    #                 name = self.request.data.get(name_key)
+    #                 if name is None:
+    #                     raise serializers.ValidationError({'error': f'Missing name for item {item_idx}'})
+    #                 types_data[type_idx]['items'].append({'name': name, 'price': value})
             
 
-        print(f':::@@:::types_data: {types_data}')
-        # Save the MenuItem instance
-        menu_item = serializer.save(restaurant=restaurant, category=restaurant_category)
+    #     print(f':::@@:::types_data: {types_data}')
+    #     # Save the MenuItem instance
+    #     menu_item = serializer.save(restaurant=restaurant, category=restaurant_category)
 
-        # Create SizeAndPrice instances for each pair of size and price
-        for size_price_data in sizes_and_prices_data:
-            SizeAndPrice.objects.create(menu_item=menu_item, **size_price_data)
+    #     # Create SizeAndPrice instances for each pair of size and price
+    #     for size_price_data in sizes_and_prices_data:
+    #         SizeAndPrice.objects.create(menu_item=menu_item, **size_price_data)
 
-        # Create MenuItemExtra instances and their associated MenuItemExtraItem instances
-        for extra_data in extras_data:
-            items_data = extra_data.pop('items', [])
-            extra = MenuItemExtra.objects.create(**extra_data)
-            for item_data in items_data:
-                MenuItemExtraItem.objects.create(extra=extra, **item_data)
-            # Associate the created MenuItemExtra with the MenuItem
-            menu_item.extras.add(extra)
+    #     # Create MenuItemExtra instances and their associated MenuItemExtraItem instances
+    #     for extra_data in extras_data:
+    #         items_data = extra_data.pop('items', [])
+    #         extra = MenuItemExtra.objects.create(**extra_data)
+    #         for item_data in items_data:
+    #             MenuItemExtraItem.objects.create(extra=extra, **item_data)
+    #         # Associate the created MenuItemExtra with the MenuItem
+    #         menu_item.extras.add(extra)
 
-        # Create MenuItemType instances and their associated MenuItemTypeItem instances
-        for type_data in types_data:
-            items_data = type_data.pop('items', [])
-            type = MenuItemType.objects.create(**type_data)
-            for item_data in items_data:
-                MenuItemTypeItem.objects.create(type=type, **item_data)
-            # Associate the created MenuItemType with the MenuItem
-            menu_item.types.add(type)
+    #     # Create MenuItemType instances and their associated MenuItemTypeItem instances
+    #     for type_data in types_data:
+    #         items_data = type_data.pop('items', [])
+    #         type = MenuItemType.objects.create(**type_data)
+    #         for item_data in items_data:
+    #             MenuItemTypeItem.objects.create(type=type, **item_data)
+    #         # Associate the created MenuItemType with the MenuItem
+    #         menu_item.types.add(type)
 
 
     
 
-    def create(self, request, *args, **kwargs):
-        print(request.data)
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+    # def create(self, request, *args, **kwargs):
+    #     print(request.data)
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_create(serializer)
 
-        if serializer.is_valid():
-            print(f'validated_data : {serializer.validated_data}')
-        else:
-            print(serializer.errors)
+    #     if serializer.is_valid():
+    #         print(f'validated_data : {serializer.validated_data}')
+    #     else:
+    #         print(serializer.errors)
             
         
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    #     headers = self.get_success_headers(serializer.data)
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 def process_extras_types_sizes_prices(data):
@@ -497,77 +497,77 @@ class MenuItemDetailView(generics.RetrieveUpdateDestroyAPIView):
 class MenuItemUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
-    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
+    # permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
 
-    def perform_update(self, serializer):
-        # Retrieve the admin associated with the authenticated user
-        admin = self.request.user.admin_profile
+    # def perform_update(self, serializer):
+    #     # Retrieve the admin associated with the authenticated user
+    #     admin = self.request.user.admin_profile
 
-        # Retrieve the associated restaurant from the admin
-        restaurant = admin.restaurant
-        print(f"restaurant = {restaurant.name}")
-        # Extract the category ID from the request data
-        category_id = self.request.data.get('category')
-        print(f'category_id = {category_id}')
-        # Retrieve the restaurant category associated with the provided category ID and the restaurant
-        restaurant_category = RestaurantCategory.objects.filter(restaurant=restaurant, id=category_id).first()
-        print(f"restaurant_category = {restaurant_category}")
-        # Ensure that the restaurant category exists and is associated with the restaurant
-        if not restaurant_category:
-            raise serializers.ValidationError({'error': 'Invalid category ID'})
+    #     # Retrieve the associated restaurant from the admin
+    #     restaurant = admin.restaurant
+    #     print(f"restaurant = {restaurant.name}")
+    #     # Extract the category ID from the request data
+    #     category_id = self.request.data.get('category')
+    #     print(f'category_id = {category_id}')
+    #     # Retrieve the restaurant category associated with the provided category ID and the restaurant
+    #     restaurant_category = RestaurantCategory.objects.filter(restaurant=restaurant, id=category_id).first()
+    #     print(f"restaurant_category = {restaurant_category}")
+    #     # Ensure that the restaurant category exists and is associated with the restaurant
+    #     if not restaurant_category:
+    #         raise serializers.ValidationError({'error': 'Invalid category ID'})
 
-        sizes_and_prices_data, extras_data, types_data = process_extras_types_sizes_prices(self.request.data)
+    #     sizes_and_prices_data, extras_data, types_data = process_extras_types_sizes_prices(self.request.data)
 
-        print(f':::::::From views sizes_and_prices_data data : {sizes_and_prices_data}')
-        print(f':::::::From views Extras data : {extras_data}')
-        print(f':::::::From views Types data : {types_data}')
+    #     print(f':::::::From views sizes_and_prices_data data : {sizes_and_prices_data}')
+    #     print(f':::::::From views Extras data : {extras_data}')
+    #     print(f':::::::From views Types data : {types_data}')
             
         
-        # Save the MenuItem instance
+    #     # Save the MenuItem instance
         
-        menu_item = serializer.save(restaurant=restaurant, category=restaurant_category)
+    #     menu_item = serializer.save(restaurant=restaurant, category=restaurant_category)
 
-        # Create SizeAndPrice instances for each pair of size and price
-        for size_price_data in sizes_and_prices_data:
-            SizeAndPrice.objects.update_or_create(menu_item=menu_item, **size_price_data)
-
-
-        for extra_data in extras_data:
-            items_data = extra_data.pop('items', [])
-            extra_id = extra_data.pop('id', None)
-            if extra_id:
-                extra_instance = MenuItemExtra.objects.get(id=extra_id)  # This line can raise MultipleObjectsReturned error
-                for item_data in items_data:
-                    # Use filter() instead of get() to handle multiple results
-                    extra_items = MenuItemExtraItem.objects.filter(extra=extra_instance, **item_data)
-                    for extra_item in extra_items:
-                        # Update or create the MenuItemExtraItem instances
-                        MenuItemExtraItem.objects.update_or_create(extra=extra_instance, **item_data)
-
-        # Update or create MenuItemExtra instances and their associated MenuItemExtraItem instances
-        for type_data in types_data:
-            items_data = type_data.pop('items', [])
-            type_id = type_data.pop('id', None)
-            if type_id:
-                type_instance = MenuItemType.objects.get(id=type_id)  
-                for item_data in items_data:
-                    # Use filter() instead of get() to handle multiple results
-                    type_items = MenuItemTypeItem.objects.filter(type=type_instance, **item_data)
-                    for type_item in type_items:
-                        # Update or create the MenuItemTypeItem instances
-                        MenuItemTypeItem.objects.update_or_create(type=type_instance, **item_data)
-
-        print("MenuItem data after processing:", menu_item.__dict__)
+    #     # Create SizeAndPrice instances for each pair of size and price
+    #     for size_price_data in sizes_and_prices_data:
+    #         SizeAndPrice.objects.update_or_create(menu_item=menu_item, **size_price_data)
 
 
+    #     for extra_data in extras_data:
+    #         items_data = extra_data.pop('items', [])
+    #         extra_id = extra_data.pop('id', None)
+    #         if extra_id:
+    #             extra_instance = MenuItemExtra.objects.get(id=extra_id)  # This line can raise MultipleObjectsReturned error
+    #             for item_data in items_data:
+    #                 # Use filter() instead of get() to handle multiple results
+    #                 extra_items = MenuItemExtraItem.objects.filter(extra=extra_instance, **item_data)
+    #                 for extra_item in extra_items:
+    #                     # Update or create the MenuItemExtraItem instances
+    #                     MenuItemExtraItem.objects.update_or_create(extra=extra_instance, **item_data)
 
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        print(f"Data sent to the serializer : {request.data}")
-        serializer = self.get_serializer(instance, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
+    #     # Update or create MenuItemExtra instances and their associated MenuItemExtraItem instances
+    #     for type_data in types_data:
+    #         items_data = type_data.pop('items', [])
+    #         type_id = type_data.pop('id', None)
+    #         if type_id:
+    #             type_instance = MenuItemType.objects.get(id=type_id)  
+    #             for item_data in items_data:
+    #                 # Use filter() instead of get() to handle multiple results
+    #                 type_items = MenuItemTypeItem.objects.filter(type=type_instance, **item_data)
+    #                 for type_item in type_items:
+    #                     # Update or create the MenuItemTypeItem instances
+    #                     MenuItemTypeItem.objects.update_or_create(type=type_instance, **item_data)
+
+    #     print("MenuItem data after processing:", menu_item.__dict__)
+
+
+
+    # def update(self, request, *args, **kwargs):
+    #     instance = self.get_object()
+    #     print(f"Data sent to the serializer : {request.data}")
+    #     serializer = self.get_serializer(instance, data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_update(serializer)
+    #     return Response(serializer.data)
     
 
 

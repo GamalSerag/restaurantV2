@@ -1,3 +1,4 @@
+import time
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.response import Response
@@ -44,7 +45,7 @@ class RestaurantDetailView(generics.RetrieveUpdateDestroyAPIView):
                 size_and_prices_data = SizeAndPrice.objects.filter(menu_item=menu_item_instance)
                 size_and_prices_serializer = SizeAndPriceSerializer(size_and_prices_data, many=True)
                 menu_item_data['sizes_and_prices'] = size_and_prices_serializer.data
-
+       
         return Response(response_data)
     
 

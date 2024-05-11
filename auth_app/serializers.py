@@ -5,6 +5,10 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from dj_rest_auth.registration.serializers import SocialLoginSerializer, SocialConnectSerializer
 from django.contrib.auth import get_user_model
 
+from allauth.socialaccount.providers.oauth2.client import OAuth2Error
+from allauth.socialaccount.helpers import complete_social_login
+
+from django.db import transaction
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,4 +36,21 @@ class GoogleSignupSerializer(SocialConnectSerializer):
     def save(self, request):
         adapter = self.get_adapter(request)
         user = adapter.save_user(request, self, email_verified=True)
+        return user
+    
+
+
+
+
+
+class CustomSocialLoginSerializer(SocialLoginSerializer):
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES, default='customer')
+
+    @transaction.atomic
+    def save(self, request):
+        print(f'Request data: {self.validated_data}')
+        user = super().save(request)
+        print(f'Saved user: {user}')
+        user.role = self.validated_data.get('role', 'customer')
+        user.save()
         return user

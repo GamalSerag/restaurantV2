@@ -2,22 +2,22 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 class CustomUserManager(BaseUserManager):
-
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email, password=None, role='customer', **extra_fields):
+        print('##################')
+        print('role:', role)
         if not email:
-            raise ValueError(_('The Email field must be set'))
+            raise ValueError('The Email field must be set')
         email = self.normalize_email(email)
 
-        
         username = extra_fields.pop('username', None)
         if not username:
             username = email.split('@')[0]  # Using email prefix as username
-        
-        user = self.model(email=email, username=username, **extra_fields)
+
+        user = self.model(email=email, username=username, role=role, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
-    
+
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -29,7 +29,6 @@ class CustomUserManager(BaseUserManager):
 
         extra_fields.setdefault('username', email)
         return self.create_user(email, password, **extra_fields)
-
 
 
 

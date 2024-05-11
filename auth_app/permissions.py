@@ -47,7 +47,10 @@ class IsCustomer(permissions.BasePermission):
     """
     Custom permission for Customer
     """
-
+    def has_permission(self, request, view):
+        # Assuming your user model has a field like `is_customer` to distinguish customers.
+        return request.user.role == 'customer'
+    
     def has_object_permission(self, request, view, obj):
         """
         Check if the order is owned by the requesting user.

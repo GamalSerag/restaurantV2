@@ -1,10 +1,9 @@
-
-
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-
+import firebase_admin
+from firebase_admin import credentials
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,7 +20,7 @@ SECRET_KEY = 'django-insecure-=#wwua!#l0$($r1gqe5s9p(8%#*4fylglkca00a(64)o)kmy(h
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-TIME_ZONE = 'Africa/Cairo'
+TIME_ZONE = os.getenv('TIME_ZONE')
 
 
 ALLOWED_HOSTS = ['*']
@@ -48,6 +47,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
     # other
     'multiselectfield',
     'drf_spectacular',
@@ -111,7 +111,6 @@ WSGI_APPLICATION = 'restarantORM.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'TIME_ZONE': TIME_ZONE,
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
@@ -145,7 +144,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Africa/Cairo'
+TIME_ZONE = os.getenv('TIME_ZONE')
 
 USE_I18N = True
 
@@ -200,12 +199,19 @@ REST_FRAMEWORK = {
 REST_AUTH = {
     
     'USE_JWT': True,
-    'JWT_AUTH_COOKIE': 'my-app-auth',
-    'JWT_AUTH_REFRESH_COOKIE': 'my-refresh-token',
+    'JWT_AUTH_HTTPONLY':False,
+    'JWT_AUTH_COOKIE': 'access',
+    'JWT_AUTH_REFRESH_COOKIE': 'refresh',
 }
 
+# REST_AUTH_REGISTER_SERIALIZERS  = {
+#     'REGISTER_SERIALIZER ': 'auth_app.serializers.CustomSocialLoginSerializer',
+# }
+
+# SOCIALACCOUNT_ADAPTER = 'auth_app.custom_adapter.CustomSocialAccountAdapter'
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=0.3),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
     'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
     'SLIDING_TOKEN_REFRESH_LIFETIME_LATE_USER': timedelta(days=1),
@@ -227,8 +233,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'restaurant.mail.send@gmail.com'
-EMAIL_HOST_PASSWORD = 'lnpb ximv hstv ulrn'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
 SITE_ID = 1
 ACCOUNT_EMAIL_VERIFICATION = "none"
@@ -252,8 +258,8 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 # }
 
 # Stripe API keys
-STRIPE_TEST_PUBLIC_KEY = 'pk_test_51Og4O2BNQnmEJIQAPQvXj0Zrrz1mASYAftLVPGSTDY8a392W6nsmwHPAEZv7VtZ30HzO6AQhVRrW86ydtSxA8vKl00Vbcgp7Re'
-STRIPE_TEST_SECRET_KEY = 'sk_test_51Og4O2BNQnmEJIQAohwj56aaIA9nPovsbDq0BzDAHNHwz5BFooStxW80ovQKcNMWaiPDQAzLdzWHkhClqPqgFNgZ00qA4x0oYX'
+STRIPE_TEST_PUBLIC_KEY = os.getenv('STRIPE_TEST_PUBLIC_KEY')
+STRIPE_TEST_SECRET_KEY = os.getenv('STRIPE_TEST_SECRET_KEY')
 # STRIPE_LIVE_PUBLIC_KEY = 'your_live_public_key'
 # STRIPE_LIVE_SECRET_KEY = 'your_live_secret_key'
 
@@ -272,3 +278,12 @@ SESSION_COOKIE_SECURE = True
 CORS_ALLOW_CREDENTIALS = True
 
 # SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
+
+
+
+# Firebase Configuration
+cred = credentials.Certificate(os.getenv('FIREBASE_CREDENTIALS_PATH'))
+firebase_app = firebase_admin.initialize_app(cred, {
+    'storageBucket': 'res-admin-app.appspot.com'
+})

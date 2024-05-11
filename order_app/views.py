@@ -321,11 +321,14 @@ class OrderStatusCountAPIView(APIView):
 
 class ListCustomerOrdersAPIView(generics.ListAPIView):
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCustomer]
 
     def get_queryset(self):
+        if not self.request.user.customer_profile:
+            raise ValidationError("BAD REQUEST: User is not a customer.")
         # Retrieve orders associated with the current authenticated user (assuming customer is the user)
-        return Order.objects.filter(customer=self.request.user.customer_profile)
+        else:
+            return Order.objects.filter(customer=self.request.user.customer_profile)
     
 
 

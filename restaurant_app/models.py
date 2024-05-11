@@ -168,6 +168,7 @@ class MenuItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(max_length=250)
+    image_url = models.URLField(null=True, max_length=500)
     image = models.ImageField(upload_to=menuitem_image_path, null=True)
     category = models.ForeignKey(RestaurantCategory, on_delete=models.CASCADE, related_name='menu_items', default=None, null=True)
     ingredients = ArrayField(models.CharField(max_length=100, null=True, blank=True), default=list, null = True)
