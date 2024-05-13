@@ -56,7 +56,7 @@ def download_pdf(request):
 
 
 def textshare(request):
-    text = "157.175.223.152"
+    text = "http://157.175.152.190/"
     return HttpResponse(text)
 
 
