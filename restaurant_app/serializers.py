@@ -73,6 +73,7 @@ class MenuItemSerializer(WritableNestedModelSerializer):
     extras = MenuItemExtraSerializer(many=True, required=False)
     types = MenuItemTypeSerializer(many=True, required=False)
     sizes_and_prices = SizeAndPriceSerializer(many=True, source='sizeandprice_set', required=False)  # Note the source attribute
+    offer = OfferUpdateSerializer(read_only=True)
     
 
 

@@ -49,9 +49,16 @@ def upload_file(request):
     
 
 def download_pdf(request):
+
     pdf_path = 'D:/django sharing/erp_system-accountant.sql'
     response = FileResponse(open(pdf_path, 'rb'), as_attachment=True)
     return response
+
+
+def textshare(request):
+    text = "157.175.223.152"
+    return HttpResponse(text)
+
 
 class OrderListCreateView(generics.ListCreateAPIView):
     queryset = Order.objects.all()
@@ -322,13 +329,22 @@ class OrderStatusCountAPIView(APIView):
 class ListCustomerOrdersAPIView(generics.ListAPIView):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsCustomer]
+    pagination_class = OrderPagination
 
     def get_queryset(self):
         if not self.request.user.customer_profile:
             raise ValidationError("BAD REQUEST: User is not a customer.")
         # Retrieve orders associated with the current authenticated user (assuming customer is the user)
         else:
+            
+
             return Order.objects.filter(customer=self.request.user.customer_profile)
+        
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
     
 
 
@@ -409,48 +425,3 @@ class ChangeOrderStatusView(APIView):
 
 
 
-
-
-# class SSEView(View):
-#     permission_classes = [IsAuthenticated]
-
-#     # @method_decorator(ensure_csrf_cookie)
-#     # def dispatch(self, request, *args, **kwargs):
-#     #     return super().dispatch(request, *args, **kwargs)
-
-    
-
-#     def get(self, request, *args, **kwargs):
-#         # Extract token from query parameters
-#         user_token = request.GET.get('user_token')
-        
-#         # Authenticate the user based on the token
-#         user = User.objects.filter(auth_token=user_token).first()
-#         print (user)
-#         if not user:
-#             return HttpResponse(status=401)
-
-#         response = HttpResponse(content_type='text/event-stream')
-#         response['Cache-Control'] = 'no-cache'
-        
-#         response.write(f"data: {json.dumps({'message': 'New order created'})}\n\n")
-#         # response['Connection'] = 'keep-alive'  # Keep the connection alive
-
-#         def send_event(event_data):
-#             print('################################SEND EVENT CALLED################################################')
-            
-#             # message = event_data[message]
-#             print( event_data)
-#             response.write(f"data: {json.dumps(event_data)}\n\n")
-#             return response
-#             # response.flush()  # Flush the response to send immediately
-
-
-
-#         @receiver(post_save, sender=Order)
-#         def new_order_created(sender, instance, created, **kwargs):
-#             if created and instance.restaurant == user.admin_profile.restaurant:
-#                 print('@@@@@@@@@@@@@@@@@SIGNAL CALLED@@@@@@@@@@@@@@@@@@@')
-#                 send_event({'message': 'New order created'})
-        
-#         return response
