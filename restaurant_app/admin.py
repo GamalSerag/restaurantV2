@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, MenuItem, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, RestaurantTable, RestaurantRegion, MenuSection, RestaurantCategory, SizeAndPrice
+from .models import Category, CategoryAdminRequest, MenuItem, MenuItemExtra, MenuItemExtraItem, MenuItemType, MenuItemTypeItem, Restaurant, RestaurantTable, RestaurantRegion, MenuSection, RestaurantCategory, SizeAndPrice
 
 # Define Inline Admin for SizeAndPrice
 class SizeAndPriceInline(admin.TabularInline):
@@ -25,3 +25,4 @@ admin.site.register(MenuItemExtra)
 admin.site.register(MenuItemTypeItem)
 admin.site.register(MenuItemType)
 admin.site.register(SizeAndPrice)
+admin.site.register(CategoryAdminRequest)

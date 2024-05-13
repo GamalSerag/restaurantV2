@@ -1,5 +1,6 @@
 import json
 from django.db import models
+# from admin_app.models import Admin
 from location_app.models import City, Country
 from django.contrib.postgres.fields import ArrayField
 from multiselectfield import MultiSelectField
@@ -22,6 +23,17 @@ def category_image_path(instance, filename):
     # This function will be used to generate the upload path
     return f'category/{instance.name}/{filename}'
 
+def restaurant_category_image_path(instance, filename):
+    # This function will be used to generate the upload path
+    return f'restaurant/{instance.name}/{filename}'
+
+
+
+
+def category_admin_request_image_path(instance, filename):
+    # This function will be used to generate the upload path
+    return f'category/admin_request/{instance.name}/{filename}'
+
 def menuitem_image_path(instance, filename):
     # This function will be used to generate the upload path
     return f'menuitems/{instance.name}/{filename}'
@@ -35,13 +47,15 @@ class Restaurant(models.Model):
     logo = models.ImageField(upload_to=restaurant_logo_path, null=True)
     background = models.ImageField(upload_to=restaurant_background_path, null=True)
     state = models.BooleanField(default='True')  # open or closed
-    free_delivery = models.CharField(max_length=10, null=True)
+    
+    free_delivery = models.BooleanField(default='False')
+    free_delivery_from = models.DecimalField(max_digits=5, decimal_places=2, null=True, default=100)
+    
 
     open_in = models.CharField(max_length=5, null=True)
     close_in = models.CharField(max_length=5, null=True)
     address = models.TextField(max_length=500)
     order_modes = models.JSONField(default=list)
-    
     tax = models.DecimalField(max_digits=5, decimal_places=2, null=True, default=0.0)
     delivery_fee = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     minimum_order = models.DecimalField(max_digits=5, decimal_places=2, null=True)
@@ -52,6 +66,18 @@ class Restaurant(models.Model):
     city = models.ForeignKey(City, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15 , null=True)
 
+    class Meta:
+        ordering = ['created_at']
+    
+    def save(self, *args, **kwargs):
+        # If free_delivery is True, set delivery_fee to 0
+        if self.free_delivery:
+            self.delivery_fee = 0
+        # if self.delivery_fee == 0:
+        #     self.free_delivery = True
+        
+        super(Restaurant, self).save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -59,15 +85,34 @@ class Restaurant(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to=category_image_path)
+    class Meta:
+        ordering = ['id']
 
     def __str__(self):
         return self.name
     
+class CategoryAdminRequest(models.Model):
+    name = models.CharField(max_length=255)
+    requseted_at = models.DateTimeField(auto_now_add=True)
+    requested_by  = models.ForeignKey('admin_app.Admin', on_delete=models.CASCADE)
+    description = models.TextField(max_length=255)
+    image = models.ImageField(upload_to=category_admin_request_image_path)
+    is_accepted = models.BooleanField(default='False')
+    is_rejected = models.BooleanField(default='False')
+    superadmin_notes = models.TextField(null=True)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return self.name
+
 
 class RestaurantCategory(models.Model):
     name = models.CharField(max_length=50)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to=restaurant_category_image_path, null=True)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='restaurant_categories', default=None, null=True)
     offer = models.OneToOneField(Offer, on_delete=models.SET_NULL, null=True, blank=True)
     tax =  models.FloatField(null=True)
     is_active = models.BooleanField(default=True)
@@ -76,7 +121,7 @@ class RestaurantCategory(models.Model):
         unique_together = ('restaurant', 'category')
 
     def __str__(self):
-        return f"{self.name} (({self.category.name})) - R:{self.restaurant.name}"
+        return f"{self.name}  - R:{self.restaurant.name}"
     
 
 class SizeAndPrice(models.Model):
@@ -123,6 +168,7 @@ class MenuItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(max_length=250)
+    image_url = models.URLField(null=True, max_length=500)
     image = models.ImageField(upload_to=menuitem_image_path, null=True)
     category = models.ForeignKey(RestaurantCategory, on_delete=models.CASCADE, related_name='menu_items', default=None, null=True)
     ingredients = ArrayField(models.CharField(max_length=100, null=True, blank=True), default=list, null = True)
@@ -131,6 +177,9 @@ class MenuItem(models.Model):
     offer = models.OneToOneField(Offer, on_delete=models.SET_NULL, null=True, blank=True)
     extras = models.ManyToManyField(MenuItemExtra, blank=True)
     types = models.ManyToManyField(MenuItemType, blank=True)
+
+    class Meta:
+        ordering = ['id']
 
     def __str__(self):
         return f"{self.name} - {self.restaurant.name}"

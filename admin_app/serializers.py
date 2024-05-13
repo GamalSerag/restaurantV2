@@ -96,25 +96,41 @@ class AdminDetailForSuperAdminSerializer(serializers.ModelSerializer):
     
     email = serializers.SerializerMethodField()
     admin_docs = serializers.SerializerMethodField()
+    restaurant_latitude = serializers.SerializerMethodField()
+    restaurant_lngitude = serializers.SerializerMethodField()
 
     class Meta:
         model = Admin
         fields = ['id','first_name', 'last_name', 'email', 'phone_number', 'created_at', 
-                'restaurant', 'subscription', 'is_subscribed', 'is_approved' ,'is_rejected' , 'has_submitted_docs', 'admin_docs']
+                'restaurant', 'subscription', 'is_subscribed', 'is_approved' ,'is_rejected' , 'has_submitted_docs', 'admin_docs', 'restaurant_latitude', 'restaurant_lngitude']
 
     def get_admin_docs(self, obj):
-        admin_doc = AdminDoc.objects.filter(admin=obj).first()
-        if admin_doc:
-            serializer = AdminDocSerializer(admin_doc)
-            # Update file URLs to include the media URL
+        admin_docs = AdminDoc.objects.filter(admin=obj).all()
+        if admin_docs:
+            serializer = AdminDocSerializer(admin_docs, many=True)
+            # Update file URLs to include the media URL for each document
             data = serializer.data
-            data['ID_photo'] = self.context['request'].build_absolute_uri(admin_doc.ID_photo.url)
-            data['business_register'] = self.context['request'].build_absolute_uri(admin_doc.business_register.url)
+            for doc_data in data:
+                doc_data['ID_photo'] = self.context['request'].build_absolute_uri(doc_data['ID_photo'])
+                doc_data['business_register'] = self.context['request'].build_absolute_uri(doc_data['business_register'])
             return data
         return None
     
     def get_email(self, obj):
         return obj.user.email
+    
+    def get_restaurant_latitude(self, obj):
+        if obj.restaurant:
+            return obj.restaurant.latitude
+        
+        return None
+    
+    def get_restaurant_lngitude(self, obj):
+        if obj.restaurant:
+            return obj.restaurant.longitude
+        
+        return None
+    
 
 
     

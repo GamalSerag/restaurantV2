@@ -6,6 +6,7 @@ from .models import Admin, AdminDoc
 from .serializers import AdminDetailForSuperAdminSerializer, AdminDocSerializer, AdminListSerializer, AdminSerializer
 from rest_framework.permissions import IsAuthenticated
 import json
+from auth_app.permissions import IsAdminOfRestaurant
 
 
 
@@ -52,17 +53,33 @@ class AdminView(generics.RetrieveAPIView):
 
 
 class AdminDocSubmitView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOfRestaurant]
     def post(self, request, format=None):
         serializer = AdminDocSerializer(data=request.data)
         if serializer.is_valid():
-
+            print(request.data)
             admin = request.user.admin_profile
             admin_id = admin.id
             admin.is_rejected = False
             serializer.save(admin_id=admin_id)
+            restaurant = admin.restaurant
+            restaurant.latitude = request.data.get('latitude')
             
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            restaurant.longitude = request.data.get('longitude')
+
+            restaurant.save()
+            admin.save()
+            print(restaurant.latitude)
+            print(restaurant.longitude)
+            
+            response_data = serializer.data
+            response_data['latitude'] = restaurant.latitude
+            response_data['longitude'] = restaurant.longitude
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        
     
 
 class AdminDocUpdateView(generics.UpdateAPIView):
