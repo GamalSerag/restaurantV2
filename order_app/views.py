@@ -56,7 +56,7 @@ def download_pdf(request):
 
 
 def textshare(request):
-    text = "157.175.223.152"
+    text = "http://157.175.152.190/"
     return HttpResponse(text)
 
 
@@ -72,6 +72,7 @@ class OrderListCreateView(generics.ListCreateAPIView):
 class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated, IsCustomer]
 
 
 class GetOrderByClientSecretView(views.APIView):
