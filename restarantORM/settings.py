@@ -168,12 +168,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 
-CORS_ALLOWED_ORIGINS = [
-    # "http://192.168.1.30:8200",  # Add the URL of your React frontend
-    # "http://localhost:8200",
-    # "http://127.0.0.1:8200",
-    "*",
-]
+# CORS_ALLOWED_ORIGINS = [
+#     # "http://192.168.1.30:8200",  # Add the URL of your React frontend
+#     # "http://localhost:8200",
+#     # "http://127.0.0.1:8200",
+#     "*",
+# ]
 
 # Optional: Allow credentials (cookies, authentication headers, etc.)
 CORS_ORIGIN_ALLOW_ALL = True
